@@ -1,0 +1,1084 @@
+import 'dart:async';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
+
+class LeaderboardScreen extends StatefulWidget {
+  const LeaderboardScreen({super.key});
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  List<Map<String, dynamic>> _topUsers = [];
+  bool _isLoading = true;
+  bool _isRevealHour = false;
+  late Timer _timer;
+  Duration _timeLeft = const Duration(days: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRevealStatus();
+    _fetchLeaderboard();
+    _startTimer();
+  }
+
+  void _checkRevealStatus() {
+    final now = DateTime.now();
+    // Example: Reveal Hour is active if it's the last day of the month and between 8 PM and 9 PM
+    final lastDay = DateTime(now.year, now.month + 1, 0);
+    setState(() {
+      _isRevealHour = (now.day == lastDay.day && now.hour == 20);
+    });
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final now = DateTime.now();
+      // Calculate time until next reveal hour (e.g., end of month 8 PM)
+      final nextReveal = DateTime(now.year, now.month + 1, 0, 20);
+      if (mounted) {
+        setState(() {
+          _timeLeft = nextReveal.difference(now);
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchLeaderboard() async {
+    try {
+      // Fetch users sorted by a dummy "hype" or updated_at for now
+      // In production, sync with 'points' or 'aura_level' column.
+      final response = await Supabase.instance.client
+          .from('users')
+          .select('*')
+          .order('username', ascending: true) // Temporary sort
+          .limit(50);
+
+      if (mounted) {
+        setState(() {
+          _topUsers = List<Map<String, dynamic>>.from(response);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          const _BackgroundBlobs(),
+          const _GrainOverlay(),
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                const _StickyNav(),
+                SliverPadding(
+                  padding: const EdgeInsets.all(24),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        child: Column(
+                          children: [
+                            _CountdownSection(timeLeft: _timeLeft),
+                            const SizedBox(height: 64),
+                            if (_isLoading)
+                              const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            else if (_topUsers.isNotEmpty)
+                              Column(
+                                children: [
+                                  _Podium(
+                                    rank1: _topUsers.length > 0
+                                        ? _topUsers[0]
+                                        : null,
+                                    rank2: _topUsers.length > 1
+                                        ? _topUsers[1]
+                                        : null,
+                                    rank3: _topUsers.length > 2
+                                        ? _topUsers[2]
+                                        : null,
+                                    isRevealHour: _isRevealHour,
+                                  ),
+                                  const SizedBox(height: 80),
+                                  _ChallengerList(
+                                    challengers: _topUsers.length > 3
+                                        ? _topUsers.sublist(3)
+                                        : [],
+                                    isRevealHour: _isRevealHour,
+                                  ),
+                                ],
+                              ),
+                            const _Footer(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Mobile Bottom Nav
+          if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackgroundBlobs extends StatelessWidget {
+  const _BackgroundBlobs();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 100,
+          left: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.08),
+            ),
+          ).withBlur(120),
+        ),
+        Positioned(
+          bottom: 200,
+          right: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withOpacity(0.06),
+            ),
+          ).withBlur(120),
+        ),
+      ],
+    );
+  }
+}
+
+extension _BlurExtension on Widget {
+  Widget withBlur(double sigma) => ImageFiltered(
+    imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    child: this,
+  );
+}
+
+class _GrainOverlay extends StatelessWidget {
+  const _GrainOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.03,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: NetworkImage(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuAT_w_ZeV94lSMmj6dQo2D_WDwLvvvFmQzKj7frQuQoMpliedmi0sooCJZUPkZCMJVLdzhig9_Buf2LETpdc7fClZ8Gj5iadPNSWLsOZQF5rnDALFW0hXiKc8EmxRNU0BsM9fWqmkKS75PxkfyZfZVnw0nxoysOHLkqUEec_9dXUKNu_sTJrE1A-ndyzf_36PQkS-eZkesf1KLP0GiXh9m525ZmPtlCOMTniwXxndxDmBnLcadAC59OYpo1czOWZGzo0YM0eKyseio',
+              ),
+              repeat: ImageRepeat.repeat,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyNav extends StatelessWidget {
+  const _StickyNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      backgroundColor: Colors.black.withOpacity(0.6),
+      floating: true,
+      pinned: true,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'CAMPUS VIBE',
+              style: AppTextStyles.headline(
+                24,
+                color: AppColors.secondary,
+                italic: true,
+              ),
+            ),
+            if (MediaQuery.of(context).size.width > 768)
+              const Row(
+                children: [
+                  _NavLink(label: 'Look Around'),
+                  const SizedBox(width: 32),
+                  _NavLink(label: 'Leaderboard', active: true),
+                  const SizedBox(width: 32),
+                  _NavLink(label: 'My Profile'),
+                ],
+              ),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: const CircleAvatar(
+                    backgroundImage: NetworkImage(
+                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDgNy4SOaz2q9LLIfeapbFuz_vcSHBhTHGL8dpR-0qdTc_X5kAJAo6MRDUkghXcMzJsn3CWAiZ2oxdLQiEaMMG6KPc0QzWdy23l7-c7F29jBaMPbUPa-ZFC1i84h-TW4ccQyn5Nsdrh0E5OQkHXzq1HrK85dZiNxbEY50OqhNVXIi4Fy0on2gTwJ99-6cwT4paKAFPb9qAWuoHxEKQFn8kX1NpkL47dONiND_70uH9tuxVcPuqGDYCUe5cmPtlfYaOaqQg1bVH60ek',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavLink extends StatelessWidget {
+  final String label;
+  final bool active;
+  const _NavLink({required this.label, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTextStyles.label(
+            10,
+            color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
+            letterSpacing: 2.0,
+            weight: FontWeight.bold,
+          ),
+        ),
+        if (active)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            height: 2,
+            width: 24,
+            color: AppColors.secondary,
+          ),
+      ],
+    );
+  }
+}
+
+class _CountdownSection extends StatelessWidget {
+  final Duration timeLeft;
+  const _CountdownSection({required this.timeLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerHigh,
+            border: Border.all(
+              color: AppColors.onSurfaceVariant.withOpacity(0.2),
+            ),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            'PHASE ONE ENDING',
+            style: AppTextStyles.label(
+              10,
+              color: AppColors.secondary,
+              weight: FontWeight.bold,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: 'The Reveal in ',
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 768 ? 84 : 48,
+                  weight: FontWeight.w900,
+                ),
+              ),
+              TextSpan(
+                text: '${timeLeft.inDays} Days',
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 768 ? 84 : 48,
+                  weight: FontWeight.w900,
+                  color: AppColors.primary,
+                  italic: true,
+                ),
+              ),
+            ],
+          ),
+        ).animate().fadeIn().slideY(begin: 0.1, end: 0, duration: 800.ms),
+        const SizedBox(height: 16),
+        Text(
+          'MAIN CHARACTER SEASON 01 • TOP 50 QUALIFY',
+          style: AppTextStyles.label(
+            12,
+            color: AppColors.onSurfaceVariant,
+            weight: FontWeight.bold,
+            letterSpacing: 3.0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Podium extends StatelessWidget {
+  final Map<String, dynamic>? rank1;
+  final Map<String, dynamic>? rank2;
+  final Map<String, dynamic>? rank3;
+  final bool isRevealHour;
+
+  const _Podium({
+    this.rank1,
+    this.rank2,
+    this.rank3,
+    required this.isRevealHour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return Center(
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: isMobile
+            ? Column(
+                children: [
+                  if (rank1 != null)
+                    _PodiumItem(
+                      rank: 1,
+                      profile: rank1!,
+                      isRevealHour: isRevealHour,
+                    ),
+                  if (rank2 != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 32),
+                      child: _PodiumItem(
+                        rank: 2,
+                        profile: rank2!,
+                        isRevealHour: isRevealHour,
+                      ),
+                    ),
+                  if (rank3 != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 32),
+                      child: _PodiumItem(
+                        rank: 3,
+                        profile: rank3!,
+                        isRevealHour: isRevealHour,
+                      ),
+                    ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (rank2 != null)
+                    Expanded(
+                      child:
+                          _PodiumItem(
+                                rank: 2,
+                                profile: rank2!,
+                                isRevealHour: isRevealHour,
+                              )
+                              .animate()
+                              .fadeIn(delay: 200.ms)
+                              .slideY(begin: 0.2, end: 0),
+                    ),
+                  const SizedBox(width: 32),
+                  if (rank1 != null)
+                    Expanded(
+                      child: _PodiumItem(
+                        rank: 1,
+                        profile: rank1!,
+                        isRevealHour: isRevealHour,
+                      ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+                    ),
+                  const SizedBox(width: 32),
+                  if (rank3 != null)
+                    Expanded(
+                      child:
+                          _PodiumItem(
+                                rank: 3,
+                                profile: rank3!,
+                                isRevealHour: isRevealHour,
+                              )
+                              .animate()
+                              .fadeIn(delay: 400.ms)
+                              .slideY(begin: 0.2, end: 0),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _PodiumItem extends StatelessWidget {
+  final int rank;
+  final Map<String, dynamic> profile;
+  final bool isRevealHour;
+
+  const _PodiumItem({
+    required this.rank,
+    required this.profile,
+    required this.isRevealHour,
+  });
+
+  Color get _rankColor {
+    switch (rank) {
+      case 1:
+        return AppColors.secondary;
+      case 2:
+        return const Color(0xFFC0C0C0);
+      case 3:
+        return const Color(0xFFCD7F32);
+      default:
+        return AppColors.outline;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarSize = rank == 1 ? 160.0 : 120.0;
+    final padding = rank == 1 ? 40.0 : 32.0;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: rank == 1
+                ? AppColors.surfaceContainer
+                : Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: rank == 1
+                  ? AppColors.secondary.withOpacity(0.2)
+                  : Colors.white10,
+            ),
+            boxShadow: rank == 1
+                ? [
+                    BoxShadow(
+                      color: AppColors.secondary.withOpacity(0.1),
+                      blurRadius: 50,
+                      offset: const Offset(0, 20),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              _Avatar(
+                url: profile['avatar_url'] ?? '',
+                size: avatarSize,
+                color: _rankColor,
+                isRevealHour: isRevealHour,
+                rank: rank,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                isRevealHour
+                    ? (profile['username'] ?? '?????').toUpperCase()
+                    : '?????',
+                style: AppTextStyles.headline(
+                  rank == 1 ? 28 : 20,
+                  weight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                (profile['bio'] ?? 'Uknown Major')
+                    .split(' ')
+                    .first
+                    .toUpperCase(), // Mocked major
+                style: AppTextStyles.label(
+                  10,
+                  color: AppColors.secondary,
+                  weight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _HypeBar(
+                percentage: rank == 1 ? 0.96 : (rank == 2 ? 0.88 : 0.74),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'HYPE LEVEL',
+                    style: AppTextStyles.label(
+                      8,
+                      color: AppColors.onSurfaceVariant,
+                      weight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    rank == 1 ? '96%' : (rank == 2 ? '88%' : '74%'),
+                    style: AppTextStyles.label(8, weight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: -24,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: _rankColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: _rankColor.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Text(
+                '#$rank',
+                style: AppTextStyles.headline(
+                  24,
+                  color: Colors.black,
+                  weight: FontWeight.w900,
+                  italic: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String url;
+  final double size;
+  final Color color;
+  final bool isRevealHour;
+  final int rank;
+
+  const _Avatar({
+    required this.url,
+    required this.size,
+    required this.color,
+    required this.isRevealHour,
+    required this.rank,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        if (rank == 1)
+          Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 40,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                ),
+              )
+              .animate(onPlay: (c) => c.repeat())
+              .scale(
+                begin: const Offset(0.8, 0.8),
+                end: const Offset(1.2, 1.2),
+                duration: 2.0.ms,
+                curve: Curves.easeInOut,
+              )
+              .fadeOut(),
+        Container(
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 4),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(size),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(color: AppColors.surfaceContainerHighest),
+                ),
+                if (!isRevealHour)
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(color: Colors.black.withOpacity(0.4)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HypeBar extends StatelessWidget {
+  final double percentage;
+  const _HypeBar({required this.percentage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 8,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: percentage,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(100),
+            gradient: const LinearGradient(
+              colors: [AppColors.secondary, AppColors.primary],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChallengerList extends StatelessWidget {
+  final List<Map<String, dynamic>> challengers;
+  final bool isRevealHour;
+
+  const _ChallengerList({
+    required this.challengers,
+    required this.isRevealHour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'TOP 50 CHALLENGERS',
+                  style: AppTextStyles.label(
+                    10,
+                    color: AppColors.onSurfaceVariant,
+                    weight: FontWeight.bold,
+                    letterSpacing: 4.0,
+                  ),
+                ),
+                const Icon(Icons.sort_rounded, color: AppColors.secondary),
+              ],
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: challengers.length,
+            itemBuilder: (context, index) {
+              return _ChallengerItem(
+                rank: index + 4,
+                profile: challengers[index],
+                isRevealHour: isRevealHour,
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(
+              'SCROLL FOR MORE RANKING',
+              style: AppTextStyles.label(
+                8,
+                color: AppColors.onSurfaceVariant,
+                weight: FontWeight.bold,
+                letterSpacing: 5.0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengerItem extends StatelessWidget {
+  final int rank;
+  final Map<String, dynamic> profile;
+  final bool isRevealHour;
+
+  const _ChallengerItem({
+    required this.rank,
+    required this.profile,
+    required this.isRevealHour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.03)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            rank.toString().padLeft(2, '0'),
+            style: AppTextStyles.headline(
+              24,
+              color: AppColors.outline,
+              weight: FontWeight.bold,
+              italic: true,
+            ),
+          ),
+          const SizedBox(width: 24),
+          _SmallAvatar(
+            url: profile['avatar_url'] ?? '',
+            isRevealHour: isRevealHour,
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isRevealHour ? (profile['username'] ?? '?????') : '?????',
+                  style: AppTextStyles.headline(16, weight: FontWeight.bold),
+                ),
+                Text(
+                  'COMP SCI', // Mocked major
+                  style: AppTextStyles.label(
+                    8,
+                    color: AppColors.onSurfaceVariant,
+                    weight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (MediaQuery.of(context).size.width > 700)
+            const SizedBox(width: 160, child: _HypeBar(percentage: 0.65)),
+          const SizedBox(width: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '65%',
+                style: AppTextStyles.headline(
+                  18,
+                  color: AppColors.primary,
+                  italic: true,
+                  weight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'HYPE',
+                style: AppTextStyles.label(
+                  8,
+                  color: AppColors.onSurfaceVariant,
+                  weight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallAvatar extends StatelessWidget {
+  final String url;
+  final bool isRevealHour;
+
+  const _SmallAvatar({required this.url, required this.isRevealHour});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(48),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) =>
+                  Container(color: AppColors.surfaceContainerHighest),
+            ),
+            if (!isRevealHour)
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(color: Colors.black.withOpacity(0.2)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 80),
+      padding: const EdgeInsets.symmetric(vertical: 64),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Color(0xFF20201F))),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'CAMPUS VIBE',
+            style: AppTextStyles.label(
+              12,
+              color: AppColors.secondary,
+              weight: FontWeight.bold,
+              letterSpacing: 2.0,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _FooterLink(label: 'Support'),
+              const SizedBox(width: 32),
+              _FooterLink(label: 'Privacy'),
+              const SizedBox(width: 32),
+              _FooterLink(label: 'Terms'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Container(
+            height: 1,
+            width: 80,
+            color: AppColors.surfaceContainerHigh,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '© 2024 MAIN CHARACTER ENERGY. .EDU VERIFIED.',
+            style: AppTextStyles.label(
+              10,
+              letterSpacing: 2.0,
+              weight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 64),
+        ],
+      ),
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  final String label;
+  const _FooterLink({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: AppTextStyles.label(
+        10,
+        letterSpacing: 2.0,
+        weight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class _MobileBottomNav extends StatelessWidget {
+  const _MobileBottomNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A).withOpacity(0.8),
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.secondary.withOpacity(0.15),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavIcon(
+                    icon: Icons.electric_bolt_rounded,
+                    label: 'QUICK VOTE',
+                  ),
+                  _NavIcon(
+                    icon: Icons.leaderboard_rounded,
+                    label: 'RANKINGS',
+                    active: true,
+                  ),
+                  _NavIcon(icon: Icons.search_rounded, label: 'SEARCH'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  const _NavIcon({
+    required this.icon,
+    required this.label,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: active
+          ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
+          : null,
+      decoration: active
+          ? BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(100),
+            )
+          : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: active ? Colors.black : AppColors.onSurfaceVariant),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: AppTextStyles.label(
+              8,
+              color: active ? Colors.black : AppColors.onSurfaceVariant,
+              letterSpacing: 1.5,
+              weight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

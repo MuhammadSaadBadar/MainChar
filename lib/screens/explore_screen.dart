@@ -1,0 +1,674 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import '../theme/app_theme.dart';
+import '../routes/app_routes.dart';
+
+class ExploreScreen extends StatelessWidget {
+  const ExploreScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          const _BackgroundBlobs(),
+          const _GrainOverlay(),
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                const _StickyNav(),
+                SliverPadding(
+                  padding: const EdgeInsets.all(24),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SearchHeader(),
+                            const SizedBox(height: 64),
+                            _MasonryFeed(),
+                            const _Footer(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Mobile Bottom Nav
+          if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackgroundBlobs extends StatelessWidget {
+  const _BackgroundBlobs();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: 100,
+          left: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.12),
+            ),
+          ).withBlur(120),
+        ),
+        Positioned(
+          bottom: 100,
+          right: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withOpacity(0.08),
+            ),
+          ).withBlur(120),
+        ),
+      ],
+    );
+  }
+}
+
+extension _BlurExtension on Widget {
+  Widget withBlur(double sigma) => ImageFiltered(
+    imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    child: this,
+  );
+}
+
+class _GrainOverlay extends StatelessWidget {
+  const _GrainOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.03,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: NetworkImage(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuAT_w_ZeV94lSMmj6dQo2D_WDwLvvvFmQzKj7frQuQoMpliedmi0sooCJZUPkZCMJVLdzhig9_Buf2LETpdc7fClZ8Gj5iadPNSWLsOZQF5rnDALFW0hXiKc8EmxRNU0BsM9fWqmkKS75PxkfyZfZVnw0nxoysOHLkqUEec_9dXUKNu_sTJrE1A-ndyzf_36PQkS-eZkesf1KLP0GiXh9m525ZmPtlCOMTniwXxndxDmBnLcadAC59OYpo1czOWZGzo0YM0eKyseio',
+              ),
+              repeat: ImageRepeat.repeat,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyNav extends StatelessWidget {
+  const _StickyNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      backgroundColor: Colors.black.withOpacity(0.6),
+      floating: true,
+      pinned: true,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      title: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'CAMPUS VIBE',
+              style: AppTextStyles.headline(
+                24,
+                color: AppColors.secondary,
+                italic: true,
+              ),
+            ),
+            if (MediaQuery.of(context).size.width > 768)
+              Row(
+                children: [
+                  _NavLink(label: 'Look Around', active: true),
+                  const SizedBox(width: 32),
+                  _NavLink(label: 'Leaderboard'),
+                  const SizedBox(width: 32),
+                  _NavLink(label: 'My Profile'),
+                ],
+              ),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 1.5),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: CircleAvatar(
+                      backgroundImage: NetworkImage(
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuC6fasm5QX003DZ9i0rsg-TUrxgf5Pr6DbbSufbrOpED28yGOidd_a-rtC_w5eTzKOtLmTH6zN1LDzjYSCPtMePee1Xq5JFgK5PkO4dUMGMROL9sf4DoLse4cefwY0G33ZbTQRcm_b2z1g3w7GLCqWDAn5vT-cPHn_L98T0P6T_oR6KRnuja4vWpshDP-WPupc4M4O55qEuyMyVOzhM9f1fQqjY3BnjJXBosv2c3Crb3EU64U12cVQANXhUEsQbbxg-UgPkyrcYnHE',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavLink extends StatelessWidget {
+  final String label;
+  final bool active;
+  const _NavLink({required this.label, this.active = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: AppTextStyles.headline(
+            14,
+            color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
+            weight: FontWeight.w900,
+          ),
+        ),
+        if (active)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            height: 2,
+            width: 40,
+            color: AppColors.secondary,
+          ),
+      ],
+    );
+  }
+}
+
+class _SearchHeader extends StatelessWidget {
+  const _SearchHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                color: AppColors.onSurfaceVariant,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextField(
+                  style: AppTextStyles.body(18, weight: FontWeight.w500),
+                  decoration: InputDecoration(
+                    hintText: 'Search the campus elite...',
+                    hintStyle: AppTextStyles.body(18, color: AppColors.outline),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 24),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        Row(
+          children: [
+            Text(
+              'TRENDING NOW:',
+              style: AppTextStyles.label(
+                10,
+                color: AppColors.onSurfaceVariant,
+                letterSpacing: 2.0,
+                weight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Wrap(
+              spacing: 8,
+              children: [
+                _TrendingChip(label: '#DesignMajor'),
+                _TrendingChip(label: '#VarsityVibe'),
+                _TrendingChip(label: '#MidnightStudio'),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _TrendingChip extends StatelessWidget {
+  final String label;
+  const _TrendingChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.label(
+          12,
+          color: AppColors.primary,
+          weight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _MasonryFeed extends StatelessWidget {
+  _MasonryFeed({super.key});
+
+  final List<Map<String, String>> profiles = [
+    {
+      'name': 'Maya Vance',
+      'id': 'Senior • ID 8292',
+      'major': 'Architecture & Urbanism',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuDSh9y7AZacLyCUENT45kmhFJnhPAxiwJu_HN_nxoR-5bq0w6o7cYMmi6QcKCI6tDaDycjqJwYCBvy0bzxs6P-OAIlGwJdcEyUF6JQnrtKB3ZSO1-3BMv7yiFDAI68HlTzNH2G0LpKmbGvmLOjfLoSB426r39oyftk2WW-tXIe3uUUqnNwiaUIOoitGJ5tb-BBx1h8caFVxqNaWZR6yqcv2X78B7ybv4DmCho3F9aKk8xZTDoZfMwqpxJ3Jzrn8_5-kFPHAv_m7EHA',
+      'ratio': '0.75', // 3/4
+    },
+    {
+      'name': 'Julian Thorne',
+      'id': 'Freshman • VIP',
+      'major': 'Computer Science',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBsuKUmWSd4CWaKvBwujVdbB6mJ2vGFzW-NRy6EKP6Uw92PNywOeszBj536dffnzBLPD7nIDp16Z9o--iBhq67L4hB0nfOfEaFnc2TmqeIR3EBhltQG8-EygSQt7GbiH_TnIWikxFyvzeEEjvGK-7VVmwur7CDLRdWQa-QhMETsmbzqU0CzfFScKOG6O7bqA9mzcBefvs8MfAVIoDlFaW9zU63sl_fVgPkicKD8YE70S3QL7NFaIcet72z5IXh-V8p0Vzw0qXLJL28',
+      'ratio': '0.8', // 4/5
+    },
+    {
+      'name': 'Sienna Ray',
+      'id': 'Junior • TOP 10',
+      'major': 'Digital Arts',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBMIbnlTqMdyMI8H5j2O2zFIrA_GX26ehODHSA3oqWFD7p_p-AyklJp6tP_-mtKR2lbgHrWR4XrLb-LSBmCSbeflsVqp1j8RINjmgKX6XVLTxD_rqeqgp3HEzDhYYFBzygBS_9Vl3OTzgLdmOKNk0Tlu4qpw_zc5CKXmOPaYXJfP4LR-S1kLIpUyz0VT15VwENUQFvLYtOTgL-BTi9n0dxdxv38nVvbxRmIgxJ5ucreU3EvSw4AbY2Pm3AjfTW-Gn_OJh6dX60d-rU',
+      'ratio': '1.0', // 1/1
+    },
+    {
+      'name': 'Leo Mendez',
+      'id': 'Grad Student',
+      'major': 'Philosophy',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBfVsfNq3devn1gOiWfJxZLrkcLrW1QliZAJ_5iCZiFMPK8BJXmnXgE092jMBgd4-BVHIQ2fJfGCBAaifd02h89JalMWwZQ-Q6YgTayhxtL8lISsp3s92o5UWtoAv5VQumMu8LZitNk3g_X-6QVwXUe_FnNsAUf8OsMeij95GNm3zOAI5smn5s9t32oX7Z6F-rXL-_0HCbmIzrnYK6DEPYUuklaWamrPbOqx1mUvVgNh0iZpICrEZFjauLgvyIv88OOcdZ3xWv1eRE',
+      'ratio': '0.6', // 3/5
+    },
+    {
+      'name': 'Tara Kim',
+      'id': 'Sophomore',
+      'major': 'Kinesiology',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuBS4Rk2E3EdQXf0EmpLSPBfors-ZIEPNtlGMsOkSdAg6B8Qvuytcq5ueAteBNvjZjt98e11D8PboVfPLipsby2LwWw0lmz-GKgLy8K7j5qjpCnmgoMMIYzyTPtiHunJQKnI-O4ua8eEjS_UlknbjQ7gCbYyDNOAZsAK32IaSoFSjMsypmdS_8trUUgv8iJ5VKIbG-n98Zj2BxTbUlRXr_j9EIup64uOZJrHYQY-RyBwPObuYhO8KkNOmiev7Q2n_r_Y3UeQ3kRDFBY',
+      'ratio': '1.33', // 4/3
+    },
+    {
+      'name': 'Marcus Cole',
+      'id': 'Senior • ELITE',
+      'major': 'Political Science',
+      'image':
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuDXpuNUP13vcTA0R-4Aw4SwA46QDEA6jiDjInBSLEHLNYoJEjff9a0SkLGfUeOC676RN3F-q8tw0DQtMRE5gKE-5RnseZpNSdumhdPe8QxG68RlrHHehjVKaau339NDAIX5ZJOnR9kn7U-WxrjQIW1hZq9prLSgKJ8-OM7Qm6eGBc77iK2_rvbLoFr9JFU9coDgrpl_1G5HoHaulbjYZgga2YSxp4s6NhSPMDBxTQ2o6ODVZjn1YaDtM57V17Uc2d44JWZZn-gNJ3Q',
+      'ratio': '0.75', // 3/4
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return MasonryGridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 1200
+          ? 3
+          : (MediaQuery.of(context).size.width > 700 ? 2 : 1),
+      mainAxisSpacing: 32,
+      crossAxisSpacing: 32,
+      itemCount: profiles.length,
+      itemBuilder: (context, index) {
+        return _ProfileCard(profile: profiles[index]);
+      },
+    );
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  final Map<String, String> profile;
+  const _ProfileCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final ratio = double.parse(profile['ratio']!);
+
+    return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.05),
+                blurRadius: 40,
+                offset: const Offset(0, 20),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: ratio,
+                  child: Image.network(profile['image']!, fit: BoxFit.cover),
+                ),
+                // Gradient Overlay
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.8),
+                        ],
+                        stops: const [0.4, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                // Content
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  top: 32,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                profile['id']!,
+                                style: AppTextStyles.label(
+                                  8,
+                                  color: Colors.black,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              profile['name']!,
+                              style: AppTextStyles.headline(
+                                28,
+                                color: Colors.white,
+                                weight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              profile['major']!.toUpperCase(),
+                              style: AppTextStyles.label(
+                                10,
+                                color: AppColors.primary,
+                                letterSpacing: 1.0,
+                                weight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: const BoxDecoration(
+                          color: AppColors.secondary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.electric_bolt_rounded,
+                          color: Colors.black,
+                          size: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
+        .animate()
+        .fadeIn(duration: 500.ms, delay: 200.ms)
+        .slideY(begin: 0.1, end: 0);
+  }
+}
+
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 80),
+      padding: const EdgeInsets.symmetric(vertical: 64),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.surfaceContainerHigh)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'CAMPUS VIBE',
+            style: AppTextStyles.label(
+              12,
+              color: AppColors.secondary,
+              weight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _FooterLink(label: 'Support'),
+              const SizedBox(width: 32),
+              _FooterLink(label: 'Privacy'),
+              const SizedBox(width: 32),
+              _FooterLink(label: 'Terms'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Container(height: 1, width: 80, color: AppColors.surfaceContainer),
+          const SizedBox(height: 24),
+          Text(
+            '© 2024 MAIN CHARACTER ENERGY. .EDU VERIFIED.',
+            style: AppTextStyles.label(
+              10,
+              letterSpacing: 2.0,
+              weight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 64),
+        ],
+      ),
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  final String label;
+  const _FooterLink({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: AppTextStyles.label(
+        10,
+        letterSpacing: 2.0,
+        weight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class _MobileBottomNav extends StatelessWidget {
+  const _MobileBottomNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(40),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A).withOpacity(0.8),
+                borderRadius: BorderRadius.circular(40),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.secondary.withOpacity(0.15),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  const _NavIcon(
+                    icon: Icons.electric_bolt_rounded,
+                    label: 'QUICK VOTE',
+                  ),
+                  _NavIcon(
+                    icon: Icons.search_rounded,
+                    label: 'SEARCH',
+                    active: true,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  const _NavIcon({
+    required this.icon,
+    required this.label,
+    this.active = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: active
+            ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
+            : null,
+        decoration: active
+            ? BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(100),
+              )
+            : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: active ? Colors.black : AppColors.onSurfaceVariant,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.label(
+                8,
+                color: active ? Colors.black : AppColors.onSurfaceVariant,
+                letterSpacing: 1.5,
+                weight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

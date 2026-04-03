@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
+import '../widgets/main_header.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -17,6 +18,7 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   List<Map<String, dynamic>> _topUsers = [];
   bool _isLoading = true;
+  Map<String, dynamic>? _currentUserProfile;
   bool _isRevealHour = false;
   late Timer _timer;
   Duration _timeLeft = const Duration(days: 0);
@@ -24,6 +26,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchCurrentUser();
     _checkRevealStatus();
     _fetchLeaderboard();
     _startTimer();
@@ -68,6 +71,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
   }
 
+  Future<void> _fetchCurrentUser() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await Supabase.instance.client
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
+      if (mounted) {
+        setState(() {
+          _currentUserProfile = response;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching current user: $e');
+    }
+  }
+
   @override
   void dispose() {
     _timer.cancel();
@@ -86,41 +109,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             slivers: [
               // Top Navigation Bar (Integrated directly into sliver)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 24,
-                    left: 24,
-                    right: 24,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'CAMPUS VIBE',
-                        style: AppTextStyles.headline(
-                          24,
-                          color: AppColors.secondary,
-                          italic: true,
-                        ),
-                      ),
-                      if (MediaQuery.of(context).size.width > 768)
-                        const GlobalTopNav(),
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () {},
-                            icon: const Icon(
-                              Icons.notifications_outlined,
-                              color: AppColors.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Placeholder user avatar link if needed
-                        ],
-                      ),
-                    ],
-                  ),
+                child: MainHeader(
+                  title: 'CAMPUS VIBE',
+                  avatarUrl: _currentUserProfile?['avatar_url'],
+                  username: _currentUserProfile?['username'],
                 ),
               ),
 

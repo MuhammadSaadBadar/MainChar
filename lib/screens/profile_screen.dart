@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
+import '../widgets/main_header.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,13 +19,32 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  bool _isSaving = false;
   bool _isRevealHour = false;
+  bool _isEditing = false;
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+  Uint8List? _imageBytes;
+
+  // Real-time Stats
+  int _upvotesCount = 0;
+  int _aura = 0;
+  StreamSubscription? _votesSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
     _checkRevealStatus();
+    _initRealtimeVotes();
+  }
+
+  @override
+  void dispose() {
+    _votesSubscription?.cancel();
+    _usernameController.dispose();
+    _bioController.dispose();
+    super.dispose();
   }
 
   void _checkRevealStatus() {
@@ -29,6 +53,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _isRevealHour = (now.day == lastDay.day && now.hour == 20);
     });
+  }
+
+  void _initRealtimeVotes() {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    // Listen for real-time updates to votes where this user is the target
+    _votesSubscription = Supabase.instance.client
+        .from('votes')
+        .stream(primaryKey: ['id'])
+        .eq('target_id', user.id)
+        .listen((List<Map<String, dynamic>> data) {
+          // Count only recognized votes
+          final count = data.where((v) => v['is_recognized'] == true).length;
+
+          if (mounted) {
+            setState(() {
+              _upvotesCount = count;
+              // Simple Aura calculation (e.g., 50 aura per recognition)
+              _aura = count * 50;
+            });
+          }
+        });
   }
 
   Future<void> _fetchUserData() async {
@@ -51,6 +98,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _toggleEdit() {
+    setState(() {
+      _isEditing = !_isEditing;
+      if (_isEditing) {
+        _usernameController.text = _userData?['username'] ?? '';
+        _bioController.text = _userData?['bio'] ?? '';
+        _imageBytes = null;
+      }
+    });
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      debugPrint('Selected image: ${image.name}, size: ${bytes.length} bytes');
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      String? avatarUrl = _userData?['avatar_url'];
+
+      if (_imageBytes != null) {
+        final filePath =
+            '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+        debugPrint('Uploading to Supabase (Web Binary): $filePath');
+
+        // Use uploadBinary to bypass the internal File check causing readAsBytesSync error on Web
+        await (Supabase.instance.client.storage.from('avatars') as dynamic)
+            .uploadBinary(
+              filePath,
+              _imageBytes!,
+              fileOptions: const FileOptions(
+                contentType: 'image/jpeg',
+                upsert: true,
+              ),
+            );
+
+        avatarUrl = Supabase.instance.client.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        debugPrint('Generated Public URL: $avatarUrl');
+      }
+
+      await Supabase.instance.client
+          .from('users')
+          .update({
+            'username': _usernameController.text.trim(),
+            'bio': _bioController.text.trim(),
+            'avatar_url': avatarUrl,
+          })
+          .eq('id', user.id);
+
+      await _fetchUserData();
+      setState(() => _isEditing = false);
+      Get.snackbar(
+        'Success',
+        'Profile updated!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update profile: $e');
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -70,6 +195,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const _GrainOverlay(),
           CustomScrollView(
             slivers: [
+              SliverToBoxAdapter(
+                child: MainHeader(
+                  title: 'CAMPUS VIBE',
+                  avatarUrl: _userData?['avatar_url'],
+                  username: _userData?['username'],
+                ),
+              ),
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 24,
@@ -87,11 +219,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             return _DesktopLayout(
                               userData: _userData,
                               isRevealHour: _isRevealHour,
+                              isEditing: _isEditing,
+                              usernameController: _usernameController,
+                              bioController: _bioController,
+                              imageBytes: _imageBytes,
+                              upvotesCount: _upvotesCount,
+                              aura: _aura,
+                              onToggleEdit: _toggleEdit,
+                              onPickImage: _pickImage,
+                              onSave: _saveChanges,
+                              isSaving: _isSaving,
                             );
                           } else {
                             return _MobileLayout(
                               userData: _userData,
                               isRevealHour: _isRevealHour,
+                              isEditing: _isEditing,
+                              usernameController: _usernameController,
+                              bioController: _bioController,
+                              imageBytes: _imageBytes,
+                              upvotesCount: _upvotesCount,
+                              aura: _aura,
+                              onToggleEdit: _toggleEdit,
+                              onPickImage: _pickImage,
+                              onSave: _saveChanges,
+                              isSaving: _isSaving,
                             );
                           }
                         },
@@ -180,221 +332,112 @@ class _HeroSection extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final bool isRevealHour;
   final bool isMobile;
+  final bool isEditing;
+  final VoidCallback? onPickImage;
+  final Uint8List? imageBytes;
 
   const _HeroSection({
     this.userData,
     required this.isRevealHour,
     this.isMobile = false,
+    this.isEditing = false,
+    this.onPickImage,
+    this.imageBytes,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasAvatar =
-        userData?['avatar_url'] != null &&
-        userData!['avatar_url'].toString().isNotEmpty;
+        (userData?['avatar_url'] != null &&
+            userData!['avatar_url'].toString().isNotEmpty) ||
+        imageBytes != null;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Main Image
-        AspectRatio(
-          aspectRatio: isMobile ? 4 / 5 : 5 / 6,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: AppColors.surfaceContainerHigh,
-              image: hasAvatar
-                  ? DecorationImage(
-                      image: NetworkImage(userData!['avatar_url']),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 40,
-                  offset: const Offset(0, 20),
+    return Center(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Circular Profile Image
+          GestureDetector(
+            onTap: isEditing ? onPickImage : null,
+            child: Container(
+              width: isMobile ? 180 : 240,
+              height: isMobile ? 180 : 240,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surfaceContainerHigh,
+                border: Border.all(
+                  color: isEditing
+                      ? AppColors.primary
+                      : AppColors.primary.withOpacity(0.2),
+                  width: 4,
                 ),
-              ],
-            ),
-            child: hasAvatar
-                ? (isMobile ? _buildMobileOverlay() : null)
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.person_outline_rounded,
-                          size: 80,
-                          color: Colors.white10,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'STYLE YOUR PROFILE',
-                          style: AppTextStyles.label(
-                            12,
-                            color: Colors.white24,
-                            letterSpacing: 2.0,
-                            weight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                image: hasAvatar
+                    ? DecorationImage(
+                        image: imageBytes != null
+                            ? MemoryImage(imageBytes!)
+                            : NetworkImage(userData!['avatar_url'])
+                                  as ImageProvider,
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 40,
+                    offset: const Offset(0, 20),
                   ),
+                ],
+              ),
+              child: !hasAvatar
+                  ? Icon(
+                      isEditing
+                          ? Icons.add_a_photo_rounded
+                          : Icons.person_outline_rounded,
+                      size: 80,
+                      color: Colors.white10,
+                    )
+                  : (isEditing
+                        ? Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withOpacity(0.3),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white70,
+                              size: 40,
+                            ),
+                          )
+                        : null),
+            ),
           ),
-        ),
-        
-        // Integrated Header Overlay
-        _IntegratedHeader(
-          username: userData?['username'] ?? 'User',
-          avatarUrl: userData?['avatar_url'],
-          isMobile: isMobile,
-        ),
-
-        // Desktop Badges
-        if (!isMobile) ...[
-          Positioned(
-            top: 24,
-            right: -24,
-            child: Transform.rotate(
-              angle: 0.1,
+          // Edit Pen Icon
+          if (!isEditing)
+            Positioned(
+              bottom: 8,
+              right: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.secondary,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.background, width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Text(
-                  'MAIN CHARACTER',
-                  style: AppTextStyles.label(
-                    14,
-                    color: Colors.black,
-                    weight: FontWeight.bold,
-                  ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: Colors.black,
+                  size: 20,
                 ),
               ),
             ),
-          ),
         ],
-      ],
-    );
-  }
-
-  Widget _buildMobileOverlay() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-        ),
-      ),
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _Tag(label: 'Vibe: Legend', color: AppColors.primary),
-              const SizedBox(width: 8),
-              _Tag(label: 'Featured Profile', color: AppColors.secondary),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            (userData?['username'] ?? 'User').toUpperCase(),
-            style: AppTextStyles.headline(48, weight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IntegratedHeader extends StatelessWidget {
-  final String username;
-  final String? avatarUrl;
-  final bool isMobile;
-
-  const _IntegratedHeader({
-    required this.username,
-    this.avatarUrl,
-    required this.isMobile,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.black.withOpacity(0.6),
-              Colors.transparent,
-            ],
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'CAMPUS VIBE',
-              style: AppTextStyles.headline(
-                24,
-                color: AppColors.secondary,
-                italic: true,
-              ),
-            ),
-            if (!isMobile) ...[
-              const GlobalTopNav(),
-            ],
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: AppColors.onSurfaceVariant,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 1),
-                  ),
-                  child: CircleAvatar(
-                    backgroundColor: AppColors.surfaceContainerHigh,
-                    backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
-                    child: avatarUrl == null
-                        ? Text(
-                            username.substring(0, 1).toUpperCase(),
-                            style: AppTextStyles.label(12, color: AppColors.primary),
-                          )
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -403,7 +446,31 @@ class _IntegratedHeader extends StatelessWidget {
 class _MobileLayout extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final bool isRevealHour;
-  const _MobileLayout({this.userData, required this.isRevealHour});
+  final bool isEditing;
+  final TextEditingController usernameController;
+  final TextEditingController bioController;
+  final Uint8List? imageBytes;
+  final int upvotesCount;
+  final int aura;
+  final VoidCallback onToggleEdit;
+  final VoidCallback onPickImage;
+  final VoidCallback onSave;
+  final bool isSaving;
+
+  const _MobileLayout({
+    this.userData,
+    required this.isRevealHour,
+    required this.isEditing,
+    required this.usernameController,
+    required this.bioController,
+    this.imageBytes,
+    required this.upvotesCount,
+    required this.aura,
+    required this.onToggleEdit,
+    required this.onPickImage,
+    required this.onSave,
+    required this.isSaving,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -414,13 +481,29 @@ class _MobileLayout extends StatelessWidget {
             padding: EdgeInsets.only(bottom: 24),
             child: GlobalTopNav(),
           ),
-        _HeroSection(
-          userData: userData,
-          isRevealHour: isRevealHour,
-          isMobile: true,
+        GestureDetector(
+          onTap: onToggleEdit,
+          child: _HeroSection(
+            userData: userData,
+            isRevealHour: isRevealHour,
+            isMobile: true,
+            isEditing: isEditing,
+            onPickImage: onPickImage,
+            imageBytes: imageBytes,
+          ),
         ),
         const SizedBox(height: 48),
-        _ContentSection(userData: userData),
+        _ContentSection(
+          userData: userData,
+          isEditing: isEditing,
+          usernameController: usernameController,
+          bioController: bioController,
+          onSave: onSave,
+          onCancel: onToggleEdit,
+          isSaving: isSaving,
+          upvotesCount: upvotesCount,
+          aura: aura,
+        ),
       ],
     );
   }
@@ -429,7 +512,31 @@ class _MobileLayout extends StatelessWidget {
 class _DesktopLayout extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final bool isRevealHour;
-  const _DesktopLayout({this.userData, required this.isRevealHour});
+  final bool isEditing;
+  final TextEditingController usernameController;
+  final TextEditingController bioController;
+  final Uint8List? imageBytes;
+  final int upvotesCount;
+  final int aura;
+  final VoidCallback onToggleEdit;
+  final VoidCallback onPickImage;
+  final VoidCallback onSave;
+  final bool isSaving;
+
+  const _DesktopLayout({
+    this.userData,
+    required this.isRevealHour,
+    required this.isEditing,
+    required this.usernameController,
+    required this.bioController,
+    this.imageBytes,
+    required this.upvotesCount,
+    required this.aura,
+    required this.onToggleEdit,
+    required this.onPickImage,
+    required this.onSave,
+    required this.isSaving,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -438,10 +545,32 @@ class _DesktopLayout extends StatelessWidget {
       children: [
         Expanded(
           flex: 6,
-          child: _HeroSection(userData: userData, isRevealHour: isRevealHour),
+          child: GestureDetector(
+            onTap: onToggleEdit,
+            child: _HeroSection(
+              userData: userData,
+              isRevealHour: isRevealHour,
+              isEditing: isEditing,
+              onPickImage: onPickImage,
+              imageBytes: imageBytes,
+            ),
+          ),
         ),
         const SizedBox(width: 64),
-        Expanded(flex: 5, child: _ContentSection(userData: userData)),
+        Expanded(
+          flex: 5,
+          child: _ContentSection(
+            userData: userData,
+            isEditing: isEditing,
+            usernameController: usernameController,
+            bioController: bioController,
+            onSave: onSave,
+            onCancel: onToggleEdit,
+            isSaving: isSaving,
+            upvotesCount: upvotesCount,
+            aura: aura,
+          ),
+        ),
       ],
     );
   }
@@ -449,27 +578,30 @@ class _DesktopLayout extends StatelessWidget {
 
 class _Tag extends StatelessWidget {
   final String label;
-  final Color? color;
   final bool isOutlined;
 
-  const _Tag({required this.label, this.color, this.isOutlined = false});
+  const _Tag({required this.label, this.isOutlined = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isOutlined ? Colors.transparent : (color ?? AppColors.surfaceContainerHigh).withOpacity(0.2),
+        color: isOutlined
+            ? Colors.transparent
+            : (AppColors.surfaceContainerHigh).withOpacity(0.2),
         borderRadius: BorderRadius.circular(100),
         border: Border.all(
-          color: isOutlined ? AppColors.onSurfaceVariant.withOpacity(0.5) : (color ?? Colors.transparent).withOpacity(0.5),
+          color: isOutlined
+              ? AppColors.onSurfaceVariant.withOpacity(0.5)
+              : Colors.transparent,
         ),
       ),
       child: Text(
         label.toUpperCase(),
         style: AppTextStyles.label(
           8,
-          color: color ?? AppColors.onSurfaceVariant,
+          color: AppColors.onSurfaceVariant,
           weight: FontWeight.bold,
           letterSpacing: 1.5,
         ),
@@ -480,7 +612,26 @@ class _Tag extends StatelessWidget {
 
 class _ContentSection extends StatelessWidget {
   final Map<String, dynamic>? userData;
-  const _ContentSection({this.userData});
+  final bool isEditing;
+  final TextEditingController? usernameController;
+  final TextEditingController? bioController;
+  final VoidCallback? onSave;
+  final VoidCallback? onCancel;
+  final bool isSaving;
+  final int upvotesCount;
+  final int aura;
+
+  const _ContentSection({
+    this.userData,
+    this.isEditing = false,
+    this.usernameController,
+    this.bioController,
+    this.onSave,
+    this.onCancel,
+    this.isSaving = false,
+    required this.upvotesCount,
+    required this.aura,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -498,12 +649,22 @@ class _ContentSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          FittedBox(
-            child: Text(
-              (userData?['username'] ?? 'User').toUpperCase(),
-              style: AppTextStyles.headline(100, weight: FontWeight.w900),
+          if (isEditing)
+            TextField(
+              controller: usernameController,
+              style: AppTextStyles.headline(60, weight: FontWeight.w900),
+              decoration: const InputDecoration(
+                hintText: 'USERNAME',
+                border: InputBorder.none,
+              ),
+            )
+          else
+            FittedBox(
+              child: Text(
+                (userData?['username'] ?? 'User').toUpperCase(),
+                style: AppTextStyles.headline(100, weight: FontWeight.w900),
+              ),
             ),
-          ),
           const SizedBox(height: 32),
         ],
         // Bio Section
@@ -527,26 +688,92 @@ class _ContentSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                userData?['bio'] ?? 'No bio set yet.',
-                style: AppTextStyles.body(
-                  18,
-                  color: AppColors.onSurfaceVariant,
+              if (isEditing)
+                TextField(
+                  controller: bioController,
+                  maxLines: 4,
+                  style: AppTextStyles.body(
+                    18,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Tell your story...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.white10),
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  userData?['bio'] ?? 'No bio set yet.',
+                  style: AppTextStyles.body(
+                    18,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ),
-              ),
+              if (isEditing) ...[
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: isSaving ? null : onSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: isSaving
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : const Text('SAVE CHANGES'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    TextButton(
+                      onPressed: isSaving ? null : onCancel,
+                      child: const Text(
+                        'CANCEL',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 32),
-              const Wrap(
+              Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  _StatBadge(label: 'UPVOTES', value: '1.2K'),
-                  _StatBadge(label: 'AURA', value: '450'),
-                  _StatBadge(label: 'STREAK', value: '12', isSecondary: true),
+                  _StatBadge(label: 'UPVOTES', value: upvotesCount.toString()),
+                  _StatBadge(label: 'AURA', value: aura.toString()),
+                  const _StatBadge(
+                    label: 'STREAK',
+                    value: '0',
+                    isSecondary: true,
+                  ),
                 ],
               ),
             ],
           ),
         ),
+        if (!isDesktop && isEditing) ...[
+          const SizedBox(height: 24),
+          TextField(
+            controller: usernameController,
+            style: AppTextStyles.headline(32, weight: FontWeight.w900),
+            decoration: const InputDecoration(
+              hintText: 'USERNAME',
+              border: InputBorder.none,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -640,7 +867,15 @@ class _GallerySection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   color: AppColors.surfaceContainerHighest,
                   image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-${1500000000000 + index}?w=500&q=80'),
+                    image: NetworkImage(
+                      [
+                        'https://images.unsplash.com/photo-1535713222168-144b1393699c?w=500&q=80',
+                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
+                        'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&q=80',
+                        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
+                        'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&q=80',
+                      ][index % 5],
+                    ),
                     fit: BoxFit.cover,
                   ),
                 ),

@@ -51,11 +51,11 @@ class AuthController extends GetxController {
           .maybeSingle();
 
       if (response == null) {
-        // No profile found
-        Get.offAllNamed(AppRoutes.PROFILE_SETUP);
+        // No profile found, redirect to ARENA as well, or a setup flow (user will use in-place edit)
+        Get.offAllNamed(AppRoutes.ARENA);
       } else {
         // Profile found
-        Get.offAllNamed(AppRoutes.NAV);
+        Get.offAllNamed(AppRoutes.ARENA);
       }
     } catch (e) {
       Get.offAllNamed(AppRoutes.LOGIN);

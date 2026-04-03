@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
-import '../screens/profile_setup_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/voting_arena_screen.dart';
 import '../screens/leaderboard_screen.dart';
@@ -10,7 +9,7 @@ import '../screens/forgot_password_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {
-  static const INITIAL = AppRoutes.ARENA;
+  static const INITIAL = AppRoutes.SPLASH;
 
   static final routes = [
     GetPage(
@@ -28,11 +27,7 @@ class AppPages {
       page: () => const RegisterScreen(),
       transition: Transition.cupertino,
     ),
-    GetPage(
-      name: AppRoutes.PROFILE_SETUP,
-      page: () => const ProfileSetupScreen(),
-      transition: Transition.cupertino,
-    ),
+
     GetPage(
       name: AppRoutes.ARENA,
       page: () => const VotingArenaScreen(),
@@ -51,11 +46,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.FORGOT_PASSWORD,
       page: () => const ForgotPasswordScreen(),
-      transition: Transition.cupertino,
-    ),
-    GetPage(
-      name: AppRoutes.EDIT_PROFILE,
-      page: () => const ProfileSetupScreen(),
       transition: Transition.cupertino,
     ),
   ];

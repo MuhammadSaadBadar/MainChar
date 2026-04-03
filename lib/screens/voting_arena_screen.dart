@@ -4,6 +4,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
+import '../widgets/main_header.dart';
 
 class VotingArenaScreen extends StatefulWidget {
   const VotingArenaScreen({super.key});
@@ -50,29 +51,15 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     if (user == null) return;
 
     try {
-      // 1. Fetch IDs of users already voted on
-      final votedResponse = await Supabase.instance.client
-          .from('votes')
-          .select('target_id')
-          .eq('voter_id', user.id);
+      final List<dynamic> response = await Supabase.instance.client.rpc(
+        'get_random_profiles',
+        params: {
+          'viewer_id': user.id,
+          'profile_limit': 10,
+        },
+      );
 
-      final votedIds = (votedResponse as List)
-          .map((v) => v['target_id'] as String)
-          .toList();
-
-      // 2. Fetch profiles not in that list and not self
-      var query = Supabase.instance.client
-          .from('users')
-          .select('*')
-          .neq('id', user.id);
-
-      if (votedIds.isNotEmpty) {
-        query = query.not('id', 'in', votedIds);
-      }
-
-      final profilesResponse = await query.limit(20);
-
-      _profiles = List<Map<String, dynamic>>.from(profilesResponse);
+      _profiles = List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint('Error fetching profiles: $e');
     }
@@ -120,7 +107,8 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
           const _GrainOverlay(),
           Column(
             children: [
-              _TopNavBar(
+              MainHeader(
+                title: 'ARENA',
                 avatarUrl: _currentUserProfile?['avatar_url'],
                 username: _currentUserProfile?['username'],
               ),
@@ -279,81 +267,6 @@ class _GrainOverlay extends StatelessWidget {
   }
 }
 
-class _TopNavBar extends StatelessWidget {
-  final String? avatarUrl;
-  final String? username;
-  const _TopNavBar({this.avatarUrl, this.username});
-
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 768;
-
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: 80,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
-            border: const Border(bottom: BorderSide(color: Colors.white10)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'ARENA',
-                style: AppTextStyles.headline(
-                  24,
-                  color: AppColors.secondary,
-                  italic: true,
-                ),
-              ),
-              if (!isMobile) ...[
-                const GlobalTopNav(),
-              ],
-              Row(
-                children: [
-                  const Icon(
-                    Icons.local_fire_department,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 20),
-                  const Icon(Icons.notifications, color: AppColors.primary),
-                  const SizedBox(width: 20),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
-                      ),
-                      image: avatarUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(avatarUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: avatarUrl == null
-                        ? Center(
-                            child: Text(
-                              (username ?? 'U').substring(0, 1).toUpperCase(),
-                              style: AppTextStyles.label(12, color: AppColors.primary),
-                            ),
-                          )
-                        : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ArenaHeading extends StatelessWidget {
   const _ArenaHeading();

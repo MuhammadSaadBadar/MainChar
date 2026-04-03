@@ -5,10 +5,55 @@ import 'package:get/get.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../theme/app_theme.dart';
 import '../routes/app_routes.dart';
+import 'dart:math';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/global_top_nav.dart';
 
-class ExploreScreen extends StatelessWidget {
+class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
+
+  @override
+  State<ExploreScreen> createState() => _ExploreScreenState();
+}
+
+class _ExploreScreenState extends State<ExploreScreen> {
+  List<Map<String, dynamic>> _profiles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfiles();
+  }
+
+  Future<void> _fetchProfiles() async {
+    setState(() => _isLoading = true);
+    try {
+      final List<dynamic> response = await Supabase.instance.client.rpc(
+        'get_explore_profiles',
+        params: {'profile_limit': 20},
+      );
+
+      final random = Random();
+      final ratios = ['0.6', '0.75', '0.8', '1.0', '1.33'];
+
+      _profiles = response.map((data) {
+        return {
+          'id': data['id'].toString().substring(0, 8).toUpperCase(),
+          'name': data['username'] ?? 'User',
+          'bio': data['bio'] ?? 'Main Character',
+          'image': data['avatar_url'] as String?,
+          'ratio': ratios[random.nextInt(ratios.length)],
+        };
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching explore profiles: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +78,28 @@ class ExploreScreen extends StatelessWidget {
                           children: [
                             const _SearchHeader(),
                             const SizedBox(height: 64),
-                            _MasonryFeed(),
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : _profiles.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          'No vibes found.',
+                                          style: AppTextStyles.body(16,
+                                              color: AppColors.onSurfaceVariant),
+                                        ),
+                                      )
+                                    : _MasonryFeed(profiles: _profiles),
+                            const SizedBox(height: 64),
+                            Center(
+                              child: _RefreshButton(
+                                isLoading: _isLoading,
+                                onRefresh: _fetchProfiles,
+                              ),
+                            ),
                             const _Footer(),
                           ],
                         ),
@@ -272,58 +338,8 @@ class _TrendingChip extends StatelessWidget {
 }
 
 class _MasonryFeed extends StatelessWidget {
-  _MasonryFeed({super.key});
-
-  final List<Map<String, String>> profiles = [
-    {
-      'name': 'Maya Vance',
-      'id': 'Senior • ID 8292',
-      'major': 'Architecture & Urbanism',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDSh9y7AZacLyCUENT45kmhFJnhPAxiwJu_HN_nxoR-5bq0w6o7cYMmi6QcKCI6tDaDycjqJwYCBvy0bzxs6P-OAIlGwJdcEyUF6JQnrtKB3ZSO1-3BMv7yiFDAI68HlTzNH2G0LpKmbGvmLOjfLoSB426r39oyftk2WW-tXIe3uUUqnNwiaUIOoitGJ5tb-BBx1h8caFVxqNaWZR6yqcv2X78B7ybv4DmCho3F9aKk8xZTDoZfMwqpxJ3Jzrn8_5-kFPHAv_m7EHA',
-      'ratio': '0.75', // 3/4
-    },
-    {
-      'name': 'Julian Thorne',
-      'id': 'Freshman • VIP',
-      'major': 'Computer Science',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBsuKUmWSd4CWaKvBwujVdbB6mJ2vGFzW-NRy6EKP6Uw92PNywOeszBj536dffnzBLPD7nIDp16Z9o--iBhq67L4hB0nfOfEaFnc2TmqeIR3EBhltQG8-EygSQt7GbiH_TnIWikxFyvzeEEjvGK-7VVmwur7CDLRdWQa-QhMETsmbzqU0CzfFScKOG6O7bqA9mzcBefvs8MfAVIoDlFaW9zU63sl_fVgPkicKD8YE70S3QL7NFaIcet72z5IXh-V8p0Vzw0qXLJL28',
-      'ratio': '0.8', // 4/5
-    },
-    {
-      'name': 'Sienna Ray',
-      'id': 'Junior • TOP 10',
-      'major': 'Digital Arts',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBMIbnlTqMdyMI8H5j2O2zFIrA_GX26ehODHSA3oqWFD7p_p-AyklJp6tP_-mtKR2lbgHrWR4XrLb-LSBmCSbeflsVqp1j8RINjmgKX6XVLTxD_rqeqgp3HEzDhYYFBzygBS_9Vl3OTzgLdmOKNk0Tlu4qpw_zc5CKXmOPaYXJfP4LR-S1kLIpUyz0VT15VwENUQFvLYtOTgL-BTi9n0dxdxv38nVvbxRmIgxJ5ucreU3EvSw4AbY2Pm3AjfTW-Gn_OJh6dX60d-rU',
-      'ratio': '1.0', // 1/1
-    },
-    {
-      'name': 'Leo Mendez',
-      'id': 'Grad Student',
-      'major': 'Philosophy',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBfVsfNq3devn1gOiWfJxZLrkcLrW1QliZAJ_5iCZiFMPK8BJXmnXgE092jMBgd4-BVHIQ2fJfGCBAaifd02h89JalMWwZQ-Q6YgTayhxtL8lISsp3s92o5UWtoAv5VQumMu8LZitNk3g_X-6QVwXUe_FnNsAUf8OsMeij95GNm3zOAI5smn5s9t32oX7Z6F-rXL-_0HCbmIzrnYK6DEPYUuklaWamrPbOqx1mUvVgNh0iZpICrEZFjauLgvyIv88OOcdZ3xWv1eRE',
-      'ratio': '0.6', // 3/5
-    },
-    {
-      'name': 'Tara Kim',
-      'id': 'Sophomore',
-      'major': 'Kinesiology',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBS4Rk2E3EdQXf0EmpLSPBfors-ZIEPNtlGMsOkSdAg6B8Qvuytcq5ueAteBNvjZjt98e11D8PboVfPLipsby2LwWw0lmz-GKgLy8K7j5qjpCnmgoMMIYzyTPtiHunJQKnI-O4ua8eEjS_UlknbjQ7gCbYyDNOAZsAK32IaSoFSjMsypmdS_8trUUgv8iJ5VKIbG-n98Zj2BxTbUlRXr_j9EIup64uOZJrHYQY-RyBwPObuYhO8KkNOmiev7Q2n_r_Y3UeQ3kRDFBY',
-      'ratio': '1.33', // 4/3
-    },
-    {
-      'name': 'Marcus Cole',
-      'id': 'Senior • ELITE',
-      'major': 'Political Science',
-      'image':
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDXpuNUP13vcTA0R-4Aw4SwA46QDEA6jiDjInBSLEHLNYoJEjff9a0SkLGfUeOC676RN3F-q8tw0DQtMRE5gKE-5RnseZpNSdumhdPe8QxG68RlrHHehjVKaau339NDAIX5ZJOnR9kn7U-WxrjQIW1hZq9prLSgKJ8-OM7Qm6eGBc77iK2_rvbLoFr9JFU9coDgrpl_1G5HoHaulbjYZgga2YSxp4s6NhSPMDBxTQ2o6ODVZjn1YaDtM57V17Uc2d44JWZZn-gNJ3Q',
-      'ratio': '0.75', // 3/4
-    },
-  ];
+  final List<Map<String, dynamic>> profiles;
+  const _MasonryFeed({required this.profiles});
 
   @override
   Widget build(BuildContext context) {
@@ -343,8 +359,61 @@ class _MasonryFeed extends StatelessWidget {
   }
 }
 
+class _RefreshButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onRefresh;
+
+  const _RefreshButton({required this.isLoading, required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onRefresh,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.secondary,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.secondary.withOpacity(0.3),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                  strokeWidth: 2,
+                ),
+              )
+            else
+              const Icon(Icons.refresh_rounded, color: Colors.black),
+            const SizedBox(width: 12),
+            Text(
+              isLoading ? 'LOADING...' : 'REFRESH VIBES',
+              style: AppTextStyles.headline(
+                14,
+                color: Colors.black,
+                weight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ProfileCard extends StatelessWidget {
-  final Map<String, String> profile;
+  final Map<String, dynamic> profile;
   const _ProfileCard({required this.profile});
 
   @override
@@ -430,7 +499,9 @@ class _ProfileCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              profile['major']!.toUpperCase(),
+                              (profile['bio'] ?? 'Main Character').toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.label(
                                 10,
                                 color: AppColors.primary,

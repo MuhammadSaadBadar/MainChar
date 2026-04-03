@@ -31,16 +31,16 @@ void main() async {
     return false;
   };
 
-  runApp(const CuiMainCharApp());
+  runApp(const MainCharApp());
 }
 
-class CuiMainCharApp extends StatelessWidget {
-  const CuiMainCharApp({super.key});
+class MainCharApp extends StatelessWidget {
+  const MainCharApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'CuiMainChar',
+      title: 'MainChar',
       debugShowCheckedModeBanner: false,
       initialBinding: BindingsBuilder(() {
         Get.put(AuthController());

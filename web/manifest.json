@@ -1,6 +1,6 @@
 {
-    "name": "mainchar",
-    "short_name": "mainchar",
+    "name": "MainChar",
+    "short_name": "MainChar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

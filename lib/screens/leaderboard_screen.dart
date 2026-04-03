@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import '../widgets/global_top_nav.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -30,7 +31,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   void _checkRevealStatus() {
     final now = DateTime.now();
-    // Example: Reveal Hour is active if it's the last day of the month and between 8 PM and 9 PM
     final lastDay = DateTime(now.year, now.month + 1, 0);
     setState(() {
       _isRevealHour = (now.day == lastDay.day && now.hour == 20);
@@ -40,7 +40,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final now = DateTime.now();
-      // Calculate time until next reveal hour (e.g., end of month 8 PM)
       final nextReveal = DateTime(now.year, now.month + 1, 0, 20);
       if (mounted) {
         setState(() {
@@ -52,12 +51,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Future<void> _fetchLeaderboard() async {
     try {
-      // Fetch users sorted by a dummy "hype" or updated_at for now
-      // In production, sync with 'points' or 'aura_level' column.
       final response = await Supabase.instance.client
           .from('users')
           .select('*')
-          .order('username', ascending: true) // Temporary sort
+          .order('username', ascending: true)
           .limit(50);
 
       if (mounted) {
@@ -85,62 +82,105 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         children: [
           const _BackgroundBlobs(),
           const _GrainOverlay(),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                const _StickyNav(),
-                SliverPadding(
-                  padding: const EdgeInsets.all(24),
-                  sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1200),
-                        child: Column(
-                          children: [
-                            _CountdownSection(timeLeft: _timeLeft),
-                            const SizedBox(height: 64),
-                            if (_isLoading)
-                              const Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            else if (_topUsers.isNotEmpty)
-                              Column(
-                                children: [
-                                  _Podium(
-                                    rank1: _topUsers.length > 0
-                                        ? _topUsers[0]
-                                        : null,
-                                    rank2: _topUsers.length > 1
-                                        ? _topUsers[1]
-                                        : null,
-                                    rank3: _topUsers.length > 2
-                                        ? _topUsers[2]
-                                        : null,
-                                    isRevealHour: _isRevealHour,
-                                  ),
-                                  const SizedBox(height: 80),
-                                  _ChallengerList(
-                                    challengers: _topUsers.length > 3
-                                        ? _topUsers.sublist(3)
-                                        : [],
-                                    isRevealHour: _isRevealHour,
-                                  ),
-                                ],
-                              ),
-                            const _Footer(),
-                          ],
+          CustomScrollView(
+            slivers: [
+              // Top Navigation Bar (Integrated directly into sliver)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 24,
+                    left: 24,
+                    right: 24,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'CAMPUS VIBE',
+                        style: AppTextStyles.headline(
+                          24,
+                          color: AppColors.secondary,
+                          italic: true,
                         ),
+                      ),
+                      if (MediaQuery.of(context).size.width > 768)
+                        const GlobalTopNav(),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Placeholder user avatar link if needed
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (MediaQuery.of(context).size.width < 768)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: GlobalTopNav()),
+                  ),
+                ),
+
+              SliverPadding(
+                padding: const EdgeInsets.all(24),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: Column(
+                        children: [
+                          _CountdownSection(timeLeft: _timeLeft),
+                          const SizedBox(height: 64),
+                          if (_isLoading)
+                            const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            )
+                          else if (_topUsers.isNotEmpty)
+                            Column(
+                              children: [
+                                _Podium(
+                                  rank1: _topUsers.length > 0
+                                      ? _topUsers[0]
+                                      : null,
+                                  rank2: _topUsers.length > 1
+                                      ? _topUsers[1]
+                                      : null,
+                                  rank3: _topUsers.length > 2
+                                      ? _topUsers[2]
+                                      : null,
+                                  isRevealHour: _isRevealHour,
+                                ),
+                                const SizedBox(height: 80),
+                                _ChallengerList(
+                                  challengers: _topUsers.length > 3
+                                      ? _topUsers.sublist(3)
+                                      : [],
+                                  isRevealHour: _isRevealHour,
+                                ),
+                              ],
+                            ),
+                          const _Footer(),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          // Mobile Bottom Nav
-          if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
         ],
       ),
     );
@@ -209,107 +249,6 @@ class _GrainOverlay extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _StickyNav extends StatelessWidget {
-  const _StickyNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      backgroundColor: Colors.black.withOpacity(0.6),
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'CAMPUS VIBE',
-              style: AppTextStyles.headline(
-                24,
-                color: AppColors.secondary,
-                italic: true,
-              ),
-            ),
-            if (MediaQuery.of(context).size.width > 768)
-              const Row(
-                children: [
-                  _NavLink(label: 'Look Around'),
-                  const SizedBox(width: 32),
-                  _NavLink(label: 'Leaderboard', active: true),
-                  const SizedBox(width: 32),
-                  _NavLink(label: 'My Profile'),
-                ],
-              ),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
-                      width: 2,
-                    ),
-                  ),
-                  child: const CircleAvatar(
-                    backgroundImage: NetworkImage(
-                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDgNy4SOaz2q9LLIfeapbFuz_vcSHBhTHGL8dpR-0qdTc_X5kAJAo6MRDUkghXcMzJsn3CWAiZ2oxdLQiEaMMG6KPc0QzWdy23l7-c7F29jBaMPbUPa-ZFC1i84h-TW4ccQyn5Nsdrh0E5OQkHXzq1HrK85dZiNxbEY50OqhNVXIi4Fy0on2gTwJ99-6cwT4paKAFPb9qAWuoHxEKQFn8kX1NpkL47dONiND_70uH9tuxVcPuqGDYCUe5cmPtlfYaOaqQg1bVH60ek',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavLink extends StatelessWidget {
-  final String label;
-  final bool active;
-  const _NavLink({required this.label, this.active = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTextStyles.label(
-            10,
-            color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
-            letterSpacing: 2.0,
-            weight: FontWeight.bold,
-          ),
-        ),
-        if (active)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            height: 2,
-            width: 24,
-            color: AppColors.secondary,
-          ),
-      ],
     );
   }
 }
@@ -550,10 +489,10 @@ class _PodiumItem extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                (profile['bio'] ?? 'Uknown Major')
+                (profile['bio'] ?? 'Unknown Major')
                     .split(' ')
                     .first
-                    .toUpperCase(), // Mocked major
+                    .toUpperCase(),
                 style: AppTextStyles.label(
                   10,
                   color: AppColors.secondary,
@@ -658,7 +597,7 @@ class _Avatar extends StatelessWidget {
               .scale(
                 begin: const Offset(0.8, 0.8),
                 end: const Offset(1.2, 1.2),
-                duration: 2.0.ms,
+                duration: 2000.ms,
                 curve: Curves.easeInOut,
               )
               .fadeOut(),
@@ -675,12 +614,15 @@ class _Avatar extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) =>
-                      Container(color: AppColors.surfaceContainerHighest),
-                ),
+                if (url.isNotEmpty)
+                  Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                        Container(color: AppColors.surfaceContainerHighest),
+                  )
+                else
+                  Container(color: AppColors.surfaceContainerHighest),
                 if (!isRevealHour)
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
@@ -806,111 +748,73 @@ class _ChallengerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.03)),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.white10)),
       ),
       child: Row(
         children: [
           Text(
-            rank.toString().padLeft(2, '0'),
-            style: AppTextStyles.headline(
-              24,
-              color: AppColors.outline,
-              weight: FontWeight.bold,
-              italic: true,
-            ),
+            '#$rank',
+            style: AppTextStyles.headline(16, weight: FontWeight.w900),
           ),
           const SizedBox(width: 24),
-          _SmallAvatar(
+          _Avatar(
             url: profile['avatar_url'] ?? '',
+            size: 40,
+            color: Colors.white10,
             isRevealHour: isRevealHour,
+            rank: rank,
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isRevealHour ? (profile['username'] ?? '?????') : '?????',
-                  style: AppTextStyles.headline(16, weight: FontWeight.bold),
+                  isRevealHour
+                      ? (profile['username'] ?? '?????').toUpperCase()
+                      : '?????',
+                  style: AppTextStyles.label(12, weight: FontWeight.bold),
                 ),
                 Text(
-                  'COMP SCI', // Mocked major
+                  'STUDENT',
                   style: AppTextStyles.label(
                     8,
                     color: AppColors.onSurfaceVariant,
-                    weight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
-          if (MediaQuery.of(context).size.width > 700)
-            const SizedBox(width: 160, child: _HypeBar(percentage: 0.65)),
-          const SizedBox(width: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '65%',
-                style: AppTextStyles.headline(
-                  18,
-                  color: AppColors.primary,
-                  italic: true,
-                  weight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'HYPE',
-                style: AppTextStyles.label(
-                  8,
-                  color: AppColors.onSurfaceVariant,
-                  weight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+          _HypeMiniBar(percentage: 0.4 + (0.5 * (1 - (rank / 50)))),
         ],
       ),
     );
   }
 }
 
-class _SmallAvatar extends StatelessWidget {
-  final String url;
-  final bool isRevealHour;
-
-  const _SmallAvatar({required this.url, required this.isRevealHour});
+class _HypeMiniBar extends StatelessWidget {
+  final double percentage;
+  const _HypeMiniBar({required this.percentage});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 48,
-      height: 48,
+      width: 60,
+      height: 4,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(100),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(48),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) =>
-                  Container(color: AppColors.surfaceContainerHighest),
-            ),
-            if (!isRevealHour)
-              BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(color: Colors.black.withOpacity(0.2)),
-              ),
-          ],
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: percentage,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.secondary,
+            borderRadius: BorderRadius.circular(100),
+          ),
         ),
       ),
     );
@@ -923,11 +827,7 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 80),
       padding: const EdgeInsets.symmetric(vertical: 64),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF20201F))),
-      ),
       child: Column(
         children: [
           Text(
@@ -936,7 +836,6 @@ class _Footer extends StatelessWidget {
               12,
               color: AppColors.secondary,
               weight: FontWeight.bold,
-              letterSpacing: 2.0,
             ),
           ),
           const SizedBox(height: 24),
@@ -949,21 +848,6 @@ class _Footer extends StatelessWidget {
               const SizedBox(width: 32),
               _FooterLink(label: 'Terms'),
             ],
-          ),
-          const SizedBox(height: 24),
-          Container(
-            height: 1,
-            width: 80,
-            color: AppColors.surfaceContainerHigh,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '© 2024 MAIN CHARACTER ENERGY. .EDU VERIFIED.',
-            style: AppTextStyles.label(
-              10,
-              letterSpacing: 2.0,
-              weight: FontWeight.bold,
-            ),
           ),
           const SizedBox(height: 64),
         ],
@@ -984,100 +868,6 @@ class _FooterLink extends StatelessWidget {
         10,
         letterSpacing: 2.0,
         weight: FontWeight.bold,
-      ),
-    );
-  }
-}
-
-class _MobileBottomNav extends StatelessWidget {
-  const _MobileBottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A).withOpacity(0.8),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.secondary.withOpacity(0.15),
-                    blurRadius: 30,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavIcon(
-                    icon: Icons.electric_bolt_rounded,
-                    label: 'QUICK VOTE',
-                  ),
-                  _NavIcon(
-                    icon: Icons.leaderboard_rounded,
-                    label: 'RANKINGS',
-                    active: true,
-                  ),
-                  _NavIcon(icon: Icons.search_rounded, label: 'SEARCH'),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavIcon extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-
-  const _NavIcon({
-    required this.icon,
-    required this.label,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: active
-          ? const EdgeInsets.symmetric(horizontal: 20, vertical: 8)
-          : null,
-      decoration: active
-          ? BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(100),
-            )
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: active ? Colors.black : AppColors.onSurfaceVariant),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.label(
-              8,
-              color: active ? Colors.black : AppColors.onSurfaceVariant,
-              letterSpacing: 1.5,
-              weight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }

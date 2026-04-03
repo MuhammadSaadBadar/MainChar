@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mainchar/screens/leaderboard_screen.dart';
+import 'package:mainchar/screens/voting_arena_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'routes/app_pages.dart';
 import 'controllers/auth_controller.dart';
@@ -20,7 +21,7 @@ void main() async {
   GoogleFonts.config.allowRuntimeFetching = true;
 
   // Catch isolated Google Fonts network/loading errors to prevent app crashes.
-  // When `allowRuntimeFetching` is true, a network error produces an unhandled 
+  // When `allowRuntimeFetching` is true, a network error produces an unhandled
   // async exception safely ignored here, allowing a graceful fallback to system fonts.
   PlatformDispatcher.instance.onError = (error, stack) {
     if (stack.toString().contains('google_fonts')) {
@@ -59,13 +60,12 @@ class CuiMainCharApp extends StatelessWidget {
           surfaceVariant: Color(0xFF262626),
           onSurfaceVariant: Color(0xFFADAAAA),
         ),
-        textTheme: GoogleFonts.epilogueTextTheme().copyWith(
-          bodyLarge: GoogleFonts.plusJakartaSans(),
-          labelLarge: GoogleFonts.spaceGrotesk(),
-        ).apply(
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
-        ),
+        textTheme: GoogleFonts.epilogueTextTheme()
+            .copyWith(
+              bodyLarge: GoogleFonts.plusJakartaSans(),
+              labelLarge: GoogleFonts.spaceGrotesk(),
+            )
+            .apply(bodyColor: Colors.white, displayColor: Colors.white),
       ),
       initialRoute: AppPages.INITIAL,
       getPages: AppPages.routes,

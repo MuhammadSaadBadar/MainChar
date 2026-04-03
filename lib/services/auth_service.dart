@@ -46,7 +46,16 @@ class AuthService {
     );
   }
 
-  /// Sends a Magic Link to the provided email if it matches the domain.
+  /// Sends a password reset email if the user exists and matches the domain.
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk')) {
+      throw Exception('Only @cuilahore.edu.pk emails are allowed!');
+    }
+    await _supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: 'mainchar://reset-password',
+    );
+  }
 
   /// Verifies the OTP sent to the user's email.
   Future<AuthResponse> verifyOTP(String email, String otp) async {

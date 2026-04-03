@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_theme.dart';
+import '../widgets/global_top_nav.dart';
 
 class VotingArenaScreen extends StatefulWidget {
   const VotingArenaScreen({super.key});
@@ -14,12 +15,34 @@ class VotingArenaScreen extends StatefulWidget {
 class _VotingArenaScreenState extends State<VotingArenaScreen> {
   final CardSwiperController _controller = CardSwiperController();
   List<Map<String, dynamic>> _profiles = [];
+  Map<String, dynamic>? _currentUserProfile;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchProfiles();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([_fetchCurrentUser(), _fetchProfiles()]);
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _fetchCurrentUser() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await Supabase.instance.client
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
+      _currentUserProfile = response;
+    } catch (e) {
+      debugPrint('Error fetching current user: $e');
+    }
   }
 
   Future<void> _fetchProfiles() async {
@@ -47,15 +70,11 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
         query = query.not('id', 'in', votedIds);
       }
 
-      final profilesResponse = await query;
+      final profilesResponse = await query.limit(20);
 
-      setState(() {
-        _profiles = List<Map<String, dynamic>>.from(profilesResponse);
-        _isLoading = false;
-      });
+      _profiles = List<Map<String, dynamic>>.from(profilesResponse);
     } catch (e) {
-      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
-      setState(() => _isLoading = false);
+      debugPrint('Error fetching profiles: $e');
     }
   }
 
@@ -65,7 +84,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     super.dispose();
   }
 
-  Future<bool> _onSwipe(
+  Future<bool> _handleSwipe(
     int previousIndex,
     int? currentIndex,
     CardSwiperDirection direction,
@@ -75,6 +94,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
 
     if (user == null) return false;
 
+    // Right/Action = Recognized (KNOW THIS GUY)
     final bool isRecognized = direction == CardSwiperDirection.right;
 
     try {
@@ -93,99 +113,239 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0F0C29), Color(0xFF302B63), Color(0xFF24243E)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          const _MainCharacterGradient(),
+          const _GrainOverlay(),
+          Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Arena',
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.leaderboard_outlined,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+              _TopNavBar(
+                avatarUrl: _currentUserProfile?['avatar_url'],
+                username: _currentUserProfile?['username'],
               ),
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
                       )
-                    : _profiles.isEmpty
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const _ArenaHeading(),
+                          const SizedBox(height: 32),
+                          _profiles.isEmpty
+                              ? _buildEmptyState()
+                              : _buildCardArena(),
+                          const SizedBox(height: 64),
+                          const _SwipeInstructions(),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardArena() {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.55,
+      width: 400,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          CardSwiper(
+            controller: _controller,
+            cardsCount: _profiles.length,
+            onSwipe: _handleSwipe,
+            numberOfCardsDisplayed: _profiles.length == 1 ? 1 : 2,
+            backCardOffset: const Offset(4, -10),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            cardBuilder:
+                (context, index, horizontalThreshold, verticalThreshold) {
+                  final profile = _profiles[index];
+                  return _VotingCard(profile: profile);
+                },
+          ),
+          Positioned(
+            bottom: -32,
+            left: 0,
+            right: 0,
+            child: _ActionControls(
+              onSkip: () => _controller.swipe(CardSwiperDirection.left),
+              onVote: () => _controller.swipe(CardSwiperDirection.right),
+              onAction: () => _controller.swipe(CardSwiperDirection.right),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      children: [
+        const Icon(
+          Icons.sentiment_satisfied_rounded,
+          size: 80,
+          color: Colors.white24,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'ARENA CLEARED',
+          style: AppTextStyles.headline(
+            24,
+            color: Colors.white24,
+            italic: true,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Check back later for new candidates.',
+          style: AppTextStyles.body(14, color: AppColors.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _MainCharacterGradient extends StatelessWidget {
+  const _MainCharacterGradient();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.12),
+            ),
+          ).withBlur(120),
+        ),
+        Positioned(
+          bottom: -100,
+          right: -100,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.secondary.withOpacity(0.08),
+            ),
+          ).withBlur(120),
+        ),
+      ],
+    );
+  }
+}
+
+extension _BlurExtension on Widget {
+  Widget withBlur(double sigma) => ImageFiltered(
+    imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+    child: this,
+  );
+}
+
+class _GrainOverlay extends StatelessWidget {
+  const _GrainOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.03,
+        child: Container(
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: NetworkImage(
+                'https://lh3.googleusercontent.com/aida-public/AB6AXuDSyDbPME4_ep428SirfZ3OwGKRT0B4qeECtW0qXAq7VsRGjhQhWdOjjrbY_svsjvmjPC9SbZel9Di1PHhuQM187_0pvoUo8OZjp-UISDnZjyTjl9WBZCAEgUUDKYT5kLcY7hjxYXuUDEdz7uNn0lUlubl1I5yKiBIWwtAdfCNrF7gDZdRi63emXPq4QXLLIC3hjpqTAs0R2B-yfO65pySP75MaQL9wbT8LCSVIH8oSwHY9QIyGceNqZ-EYj3d7Z-nla72IFKd6tCQ',
+              ),
+              repeat: ImageRepeat.repeat,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopNavBar extends StatelessWidget {
+  final String? avatarUrl;
+  final String? username;
+  const _TopNavBar({this.avatarUrl, this.username});
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          height: 80,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            border: const Border(bottom: BorderSide(color: Colors.white10)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'ARENA',
+                style: AppTextStyles.headline(
+                  24,
+                  color: AppColors.secondary,
+                  italic: true,
+                ),
+              ),
+              if (!isMobile) ...[
+                const GlobalTopNav(),
+              ],
+              Row(
+                children: [
+                  const Icon(
+                    Icons.local_fire_department,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 20),
+                  const Icon(Icons.notifications, color: AppColors.primary),
+                  const SizedBox(width: 20),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                      ),
+                      image: avatarUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(avatarUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: avatarUrl == null
                         ? Center(
                             child: Text(
-                              'No more profiles!',
-                              style: GoogleFonts.outfit(
-                                fontSize: 20,
-                                color: Colors.white70,
-                              ),
+                              (username ?? 'U').substring(0, 1).toUpperCase(),
+                              style: AppTextStyles.label(12, color: AppColors.primary),
                             ),
                           )
-                        : CardSwiper(
-                            controller: _controller,
-                            cardsCount: _profiles.length,
-                            onSwipe: _onSwipe,
-                            numberOfCardsDisplayed: _profiles.length == 1 ? 1 : (_profiles.length == 2 ? 2 : 3),
-                            padding: const EdgeInsets.all(24.0),
-                            cardBuilder:
-                                (
-                                  context,
-                                  index,
-                                  horizontalThresholdPercentage,
-                                  verticalThresholdPercentage,
-                                ) {
-                                  final profile = _profiles[index];
-                                  return _buildProfileCard(profile);
-                                },
-                          ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.close,
-                      color: Colors.redAccent,
-                      onTap: () => _controller.swipe(CardSwiperDirection.left),
-                    ),
-                    _buildActionButton(
-                      icon: Icons.favorite,
-                      color: const Color(0xFFE94057),
-                      onTap: () => _controller.swipe(CardSwiperDirection.right),
-                      isLarge: true,
-                    ),
-                    _buildActionButton(
-                      icon: Icons.refresh,
-                      color: Colors.blueAccent,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
+                        : null,
+                  ),
+                ],
               ),
             ],
           ),
@@ -193,16 +353,77 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
       ),
     );
   }
+}
 
-  Widget _buildProfileCard(Map<String, dynamic> profile) {
+class _ArenaHeading extends StatelessWidget {
+  const _ArenaHeading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.secondary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+          ),
+          child: Text(
+            'ACTIVE SESSION',
+            style: AppTextStyles.label(
+              10,
+              color: AppColors.secondary,
+              weight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        RichText(
+          text: TextSpan(
+            style: AppTextStyles.headline(48, weight: FontWeight.w900),
+            children: [
+              const TextSpan(text: 'VOTING '),
+              TextSpan(
+                text: 'ARENA',
+                style: AppTextStyles.headline(
+                  48,
+                  color: AppColors.primary,
+                  italic: true,
+                  weight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (MediaQuery.of(context).size.width < 768)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: GlobalTopNav(),
+          ),
+      ],
+    );
+  }
+}
+
+class _VotingCard extends StatelessWidget {
+  final Map<String, dynamic> profile;
+  const _VotingCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = profile['avatar_url'] as String?;
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 40,
+            offset: const Offset(0, 20),
           ),
         ],
       ),
@@ -210,46 +431,90 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            profile['avatar_url'] ?? '',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: Colors.grey[800],
-              child: const Icon(Icons.person, size: 80, color: Colors.white24),
-            ),
-          ),
+          if (avatarUrl != null)
+            Image.network(
+              avatarUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => _buildPlaceholder(),
+            )
+          else
+            _buildPlaceholder(),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-                stops: const [0.6, 1.0],
+                stops: const [0.5, 1.0],
               ),
             ),
           ),
           Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
+            bottom: 32,
+            left: 32,
+            right: 32,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${profile['username'] ?? 'User'}, 21',
+                      style: AppTextStyles.headline(
+                        32,
+                        weight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'PRO',
+                        style: AppTextStyles.label(
+                          10,
+                          color: Colors.black,
+                          weight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  profile['username'] ?? 'User',
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  'MAIN CHARACTER',
+                  style: AppTextStyles.label(
+                    14,
+                    color: AppColors.secondary,
+                    weight: FontWeight.bold,
+                    letterSpacing: 2,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 8),
                 Text(
-                  profile['bio']!,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    color: Colors.white70,
+                  profile['bio'] ?? 'Creating pixel-perfect worlds...',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body(
+                    14,
+                    color: AppColors.onSurfaceVariant,
                   ),
+                ),
+                const SizedBox(height: 24),
+                const Wrap(
+                  spacing: 8,
+                  children: [
+                    _CardTag(label: 'Design'),
+                    _CardTag(label: 'Art'),
+                    _CardTag(label: 'Hype'),
+                  ],
                 ),
               ],
             ),
@@ -259,22 +524,176 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-    bool isLarge = false,
-  }) {
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.grey[900],
+      child: const Icon(Icons.person, size: 100, color: Colors.white10),
+    );
+  }
+}
+
+class _CardTag extends StatelessWidget {
+  final String label;
+  const _CardTag({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.label(
+          10,
+          color: Colors.white,
+          weight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionControls extends StatelessWidget {
+  final VoidCallback onSkip;
+  final VoidCallback onVote;
+  final VoidCallback onAction;
+
+  const _ActionControls({
+    required this.onSkip,
+    required this.onVote,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _CircleButton(icon: Icons.close, onTap: onSkip, size: 56),
+        const SizedBox(width: 24),
+        GestureDetector(
+          onTap: onAction,
+          child: Container(
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.secondary.withOpacity(0.4),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.bolt, color: Colors.black, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'KNOW THIS GUY',
+                  style: AppTextStyles.headline(
+                    14,
+                    color: Colors.black,
+                    weight: FontWeight.w900,
+                    italic: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 24),
+        _CircleButton(
+          icon: Icons.favorite,
+          onTap: onVote,
+          size: 56,
+          isPrimary: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _CircleButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final double size;
+  final bool isPrimary;
+
+  const _CircleButton({
+    required this.icon,
+    required this.onTap,
+    required this.size,
+    this.isPrimary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(isLarge ? 20 : 15),
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: AppColors.surfaceContainerHigh,
           shape: BoxShape.circle,
-          border: Border.all(color: color, width: 2),
+          border: Border.all(color: Colors.white10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        child: Icon(icon, color: color, size: isLarge ? 35 : 25),
+        child: Icon(
+          icon,
+          color: isPrimary ? AppColors.primary : AppColors.onSurfaceVariant,
+          size: size * 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _SwipeInstructions extends StatelessWidget {
+  const _SwipeInstructions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.4,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.keyboard_arrow_left, size: 16, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(
+            'SWIPE LEFT TO SKIP',
+            style: AppTextStyles.label(
+              10,
+              color: Colors.white,
+              letterSpacing: 2.0,
+            ),
+          ),
+          const SizedBox(width: 24),
+          Text(
+            'SWIPE RIGHT TO VOTE',
+            style: AppTextStyles.label(
+              10,
+              color: Colors.white,
+              letterSpacing: 2.0,
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.keyboard_arrow_right, size: 16, color: Colors.white),
+        ],
       ),
     );
   }

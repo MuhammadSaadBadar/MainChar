@@ -609,7 +609,7 @@ class _LoginCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () {},
+                  onPressed: () => Get.toNamed(AppRoutes.FORGOT_PASSWORD),
                   icon: const Icon(
                     Icons.lock_reset,
                     size: 14,

@@ -15,6 +15,12 @@ class GlobalTopNav extends StatelessWidget {
       children: [
         _NavLink(
           label: 'Look Around',
+          active: currentRoute == AppRoutes.EXPLORE,
+          onTap: () => _navigate(AppRoutes.EXPLORE),
+        ),
+        const SizedBox(width: 32),
+        _NavLink(
+          label: 'Arena',
           active: currentRoute == AppRoutes.ARENA,
           onTap: () => _navigate(AppRoutes.ARENA),
         ),

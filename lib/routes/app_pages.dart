@@ -6,6 +6,7 @@ import '../screens/voting_arena_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/forgot_password_screen.dart';
+import '../screens/explore_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -47,6 +48,11 @@ class AppPages {
       name: AppRoutes.FORGOT_PASSWORD,
       page: () => const ForgotPasswordScreen(),
       transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: AppRoutes.EXPLORE,
+      page: () => const ExploreScreen(),
+      transition: Transition.fadeIn,
     ),
   ];
 }

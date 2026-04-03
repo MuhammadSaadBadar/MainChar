@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../theme/app_theme.dart';
 import '../routes/app_routes.dart';
+import '../widgets/global_top_nav.dart';
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -142,15 +143,7 @@ class _StickyNav extends StatelessWidget {
               ),
             ),
             if (MediaQuery.of(context).size.width > 768)
-              Row(
-                children: [
-                  _NavLink(label: 'Look Around', active: true),
-                  const SizedBox(width: 32),
-                  _NavLink(label: 'Leaderboard'),
-                  const SizedBox(width: 32),
-                  _NavLink(label: 'My Profile'),
-                ],
-              ),
+              const GlobalTopNav(),
             Row(
               children: [
                 IconButton(
@@ -187,35 +180,7 @@ class _StickyNav extends StatelessWidget {
   }
 }
 
-class _NavLink extends StatelessWidget {
-  final String label;
-  final bool active;
-  const _NavLink({required this.label, this.active = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTextStyles.headline(
-            14,
-            color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
-            weight: FontWeight.w900,
-          ),
-        ),
-        if (active)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            height: 2,
-            width: 40,
-            color: AppColors.secondary,
-          ),
-      ],
-    );
-  }
-}
+// Obsolete _NavLink removed
 
 class _SearchHeader extends StatelessWidget {
   const _SearchHeader();
@@ -602,13 +567,18 @@ class _MobileBottomNav extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  const _NavIcon(
+                  _NavIcon(
                     icon: Icons.electric_bolt_rounded,
                     label: 'QUICK VOTE',
+                    onTap: () {
+                      if (Get.currentRoute != AppRoutes.ARENA) {
+                        Get.offNamed(AppRoutes.ARENA);
+                      }
+                    },
                   ),
                   _NavIcon(
                     icon: Icons.search_rounded,
-                    label: 'SEARCH',
+                    label: 'EXPLORE',
                     active: true,
                     onTap: () {},
                   ),

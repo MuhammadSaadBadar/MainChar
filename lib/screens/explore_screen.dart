@@ -35,7 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       );
 
       final random = Random();
-      final ratios = ['0.6', '0.75', '0.8', '1.0', '1.33'];
+      final ratios = ['0.8', '1.0', '1.1', '1.25', '1.33'];
 
       _profiles = response.map((data) {
         return {
@@ -343,12 +343,10 @@ class _MasonryFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MasonryGridView.count(
+    return MasonryGridView.extent(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 1200
-          ? 3
-          : (MediaQuery.of(context).size.width > 700 ? 2 : 1),
+      maxCrossAxisExtent: 380,
       mainAxisSpacing: 32,
       crossAxisSpacing: 32,
       itemCount: profiles.length,
@@ -438,7 +436,23 @@ class _ProfileCard extends StatelessWidget {
               children: [
                 AspectRatio(
                   aspectRatio: ratio,
-                  child: Image.network(profile['image']!, fit: BoxFit.cover),
+                  child: profile['image'] != null
+                      ? Image.network(
+                          profile['image']!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[900],
+                              child: const Icon(Icons.person,
+                                  size: 100, color: Colors.white10),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.grey[900],
+                          child: const Icon(Icons.person,
+                              size: 100, color: Colors.white10),
+                        ),
                 ),
                 // Gradient Overlay
                 Positioned.fill(

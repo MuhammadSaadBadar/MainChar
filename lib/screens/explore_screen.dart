@@ -39,9 +39,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
       _profiles = response.map((data) {
         return {
-          'id': data['id'].toString().substring(0, 8).toUpperCase(),
+          'id': data['id'],
           'name': data['username'] ?? 'User',
-          'bio': data['bio'] ?? 'Main Character',
+          'bio': data['bio'] ?? '',
           'image': data['avatar_url'] as String?,
           'ratio': ratios[random.nextInt(ratios.length)],
         };
@@ -85,14 +85,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                     ),
                                   )
                                 : _profiles.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          'No vibes found.',
-                                          style: AppTextStyles.body(16,
-                                              color: AppColors.onSurfaceVariant),
-                                        ),
-                                      )
-                                    : _MasonryFeed(profiles: _profiles),
+                                ? Center(
+                                    child: Text(
+                                      'No vibes found.',
+                                      style: AppTextStyles.body(
+                                        16,
+                                        color: AppColors.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  )
+                                : _MasonryFeed(profiles: _profiles),
                             const SizedBox(height: 64),
                             Center(
                               child: _RefreshButton(
@@ -208,8 +210,7 @@ class _StickyNav extends StatelessWidget {
                 italic: true,
               ),
             ),
-            if (MediaQuery.of(context).size.width > 768)
-              const GlobalTopNav(),
+            if (MediaQuery.of(context).size.width > 768) const GlobalTopNav(),
             Row(
               children: [
                 IconButton(
@@ -418,18 +419,29 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ratio = double.parse(profile['ratio']!);
 
-    return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.05),
-                blurRadius: 40,
-                offset: const Offset(0, 20),
-              ),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () {
+        Get.toNamed(AppRoutes.ARENA, arguments: {
+          'initialProfile': {
+            'id': profile['id'],
+            'username': profile['name'],
+            'avatar_url': profile['image'],
+            'bio': profile['bio'],
+          }
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.05),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Stack(
@@ -443,15 +455,21 @@ class _ProfileCard extends StatelessWidget {
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey[900],
-                              child: const Icon(Icons.person,
-                                  size: 100, color: Colors.white10),
+                              child: const Icon(
+                                Icons.person,
+                                size: 100,
+                                color: Colors.white10,
+                              ),
                             );
                           },
                         )
                       : Container(
                           color: Colors.grey[900],
-                          child: const Icon(Icons.person,
-                              size: 100, color: Colors.white10),
+                          child: const Icon(
+                            Icons.person,
+                            size: 100,
+                            color: Colors.white10,
+                          ),
                         ),
                 ),
                 // Gradient Overlay
@@ -484,24 +502,6 @@ class _ProfileCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                profile['id']!,
-                                style: AppTextStyles.label(
-                                  8,
-                                  color: Colors.black,
-                                  weight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
                             const SizedBox(height: 8),
                             Text(
                               profile['name']!,
@@ -513,7 +513,8 @@ class _ProfileCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              (profile['bio'] ?? 'Main Character').toUpperCase(),
+                              (profile['bio'] ?? 'Main Character')
+                                  .toUpperCase(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.label(
@@ -546,10 +547,11 @@ class _ProfileCard extends StatelessWidget {
               ],
             ),
           ),
-        )
-        .animate()
-        .fadeIn(duration: 500.ms, delay: 200.ms)
-        .slideY(begin: 0.1, end: 0);
+        ),
+      )
+      .animate()
+      .fadeIn(duration: 500.ms, delay: 200.ms)
+      .slideY(begin: 0.1, end: 0);
   }
 }
 

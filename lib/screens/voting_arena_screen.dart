@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
@@ -27,6 +28,14 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
 
   Future<void> _loadData() async {
     await Future.wait([_fetchCurrentUser(), _fetchProfiles()]);
+    
+    final args = Get.arguments;
+    if (args != null && args is Map<String, dynamic> && args['initialProfile'] != null) {
+      final initialProfile = args['initialProfile'] as Map<String, dynamic>;
+      _profiles.removeWhere((p) => p['id'] == initialProfile['id']);
+      _profiles.insert(0, initialProfile);
+    }
+    
     setState(() => _isLoading = false);
   }
 

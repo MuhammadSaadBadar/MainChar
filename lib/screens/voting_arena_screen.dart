@@ -6,6 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
 import '../widgets/main_header.dart';
+import '../widgets/activity_chip.dart';
+import '../constants/university_activities.dart';
 
 class VotingArenaScreen extends StatefulWidget {
   const VotingArenaScreen({super.key});
@@ -421,24 +423,33 @@ class _VotingCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  profile['bio'] ?? 'Creating pixel-perfect worlds...',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body(
-                    14,
-                    color: AppColors.onSurfaceVariant,
+                const SizedBox(height: 8),
+                if (profile['vibe_tags'] != null &&
+                    (profile['vibe_tags'] as List).isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: (profile['vibe_tags'] as List).map((tag) {
+                      final activity =
+                          UniversityActivities.fromLabel(tag.toString());
+                      return ActivityChip(
+                        label: tag.toString(),
+                        icon: activity?.icon ?? '✨',
+                        isCompact: true,
+                      );
+                    }).toList(),
+                  )
+                else
+                  Text(
+                    profile['bio'] ?? 'MAIN CHARACTER VIBE',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.body(
+                      14,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 24),
-                const Wrap(
-                  spacing: 8,
-                  children: [
-                    _CardTag(label: 'Design'),
-                    _CardTag(label: 'Art'),
-                    _CardTag(label: 'Hype'),
-                  ],
-                ),
               ],
             ),
           ),
@@ -451,31 +462,6 @@ class _VotingCard extends StatelessWidget {
     return Container(
       color: Colors.grey[900],
       child: const Icon(Icons.person, size: 100, color: Colors.white10),
-    );
-  }
-}
-
-class _CardTag extends StatelessWidget {
-  final String label;
-  const _CardTag({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHigh.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.label(
-          10,
-          color: Colors.white,
-          weight: FontWeight.bold,
-        ),
-      ),
     );
   }
 }

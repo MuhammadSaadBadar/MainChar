@@ -8,6 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../widgets/global_top_nav.dart';
 import '../widgets/main_header.dart';
+import '../widgets/activity_chip.dart';
+import '../widgets/activity_picker_sheet.dart';
+import '../constants/university_activities.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isRevealHour = false;
   bool _isEditing = false;
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
+  List<String> _selectedTags = [];
   Uint8List? _imageBytes;
 
   // Real-time Stats
@@ -43,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _votesSubscription?.cancel();
     _usernameController.dispose();
-    _bioController.dispose();
     super.dispose();
   }
 
@@ -91,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() {
         _userData = response;
+        _selectedTags = List<String>.from(response['vibe_tags'] ?? []);
         _isLoading = false;
       });
     } catch (e) {
@@ -103,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _isEditing = !_isEditing;
       if (_isEditing) {
         _usernameController.text = _userData?['username'] ?? '';
-        _bioController.text = _userData?['bio'] ?? '';
+        _selectedTags = List<String>.from(_userData?['vibe_tags'] ?? []);
         _imageBytes = null;
       }
     });
@@ -156,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .from('users')
           .update({
             'username': _usernameController.text.trim(),
-            'bio': _bioController.text.trim(),
+            'vibe_tags': _selectedTags,
             'avatar_url': avatarUrl,
           })
           .eq('id', user.id);
@@ -221,13 +224,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isRevealHour: _isRevealHour,
                               isEditing: _isEditing,
                               usernameController: _usernameController,
-                              bioController: _bioController,
+                              selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
                               aura: _aura,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
+                              onTagsChanged: (tags) => setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                             );
                           } else {
@@ -236,13 +240,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isRevealHour: _isRevealHour,
                               isEditing: _isEditing,
                               usernameController: _usernameController,
-                              bioController: _bioController,
+                              selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
                               aura: _aura,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
+                              onTagsChanged: (tags) => setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                             );
                           }
@@ -448,13 +453,14 @@ class _MobileLayout extends StatelessWidget {
   final bool isRevealHour;
   final bool isEditing;
   final TextEditingController usernameController;
-  final TextEditingController bioController;
+  final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
   final int aura;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
+  final Function(List<String>) onTagsChanged;
   final bool isSaving;
 
   const _MobileLayout({
@@ -462,13 +468,14 @@ class _MobileLayout extends StatelessWidget {
     required this.isRevealHour,
     required this.isEditing,
     required this.usernameController,
-    required this.bioController,
+    required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
     required this.aura,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
+    required this.onTagsChanged,
     required this.isSaving,
   });
 
@@ -497,9 +504,10 @@ class _MobileLayout extends StatelessWidget {
           userData: userData,
           isEditing: isEditing,
           usernameController: usernameController,
-          bioController: bioController,
+          selectedTags: selectedTags,
           onSave: onSave,
           onCancel: onToggleEdit,
+          onTagsChanged: onTagsChanged,
           isSaving: isSaving,
           upvotesCount: upvotesCount,
           aura: aura,
@@ -514,13 +522,14 @@ class _DesktopLayout extends StatelessWidget {
   final bool isRevealHour;
   final bool isEditing;
   final TextEditingController usernameController;
-  final TextEditingController bioController;
+  final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
   final int aura;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
+  final Function(List<String>) onTagsChanged;
   final bool isSaving;
 
   const _DesktopLayout({
@@ -528,13 +537,14 @@ class _DesktopLayout extends StatelessWidget {
     required this.isRevealHour,
     required this.isEditing,
     required this.usernameController,
-    required this.bioController,
+    required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
     required this.aura,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
+    required this.onTagsChanged,
     required this.isSaving,
   });
 
@@ -563,9 +573,10 @@ class _DesktopLayout extends StatelessWidget {
             userData: userData,
             isEditing: isEditing,
             usernameController: usernameController,
-            bioController: bioController,
+            selectedTags: selectedTags,
             onSave: onSave,
             onCancel: onToggleEdit,
+            onTagsChanged: onTagsChanged,
             isSaving: isSaving,
             upvotesCount: upvotesCount,
             aura: aura,
@@ -614,9 +625,10 @@ class _ContentSection extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final bool isEditing;
   final TextEditingController? usernameController;
-  final TextEditingController? bioController;
+  final List<String> selectedTags;
   final VoidCallback? onSave;
   final VoidCallback? onCancel;
+  final Function(List<String>)? onTagsChanged;
   final bool isSaving;
   final int upvotesCount;
   final int aura;
@@ -625,9 +637,10 @@ class _ContentSection extends StatelessWidget {
     this.userData,
     this.isEditing = false,
     this.usernameController,
-    this.bioController,
+    this.selectedTags = const [],
     this.onSave,
     this.onCancel,
+    this.onTagsChanged,
     this.isSaving = false,
     required this.upvotesCount,
     required this.aura,
@@ -689,28 +702,59 @@ class _ContentSection extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               if (isEditing)
-                TextField(
-                  controller: bioController,
-                  maxLines: 4,
-                  style: AppTextStyles.body(
-                    18,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Tell your story...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Colors.white10),
+                GestureDetector(
+                  onTap: () {
+                    Get.bottomSheet(
+                      ActivityPickerSheet(
+                        initialSelected: selectedTags,
+                        onSave: onTagsChanged ?? (_) {},
+                      ),
+                      isScrollControlled: true,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_circle_outline_rounded,
+                            color: AppColors.primary),
+                        const SizedBox(width: 16),
+                        Text(
+                          selectedTags.isEmpty
+                              ? 'ADD YOUR CAMPUS ACTIVITIES'
+                              : '${selectedTags.length} ACTIVITIES SELECTED',
+                          style: AppTextStyles.label(12,
+                              color: AppColors.primary, weight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                 )
-              else
+              else if (selectedTags.isEmpty)
                 Text(
-                  userData?['bio'] ?? 'No bio set yet.',
+                  'No activities selected yet.',
                   style: AppTextStyles.body(
                     18,
                     color: AppColors.onSurfaceVariant,
                   ),
+                )
+              else
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: selectedTags.map((tag) {
+                    final activity = UniversityActivities.fromLabel(tag);
+                    return ActivityChip(
+                      label: tag,
+                      icon: activity?.icon ?? '✨',
+                      isCompact: true,
+                    );
+                  }).toList(),
                 ),
               if (isEditing) ...[
                 const SizedBox(height: 32),

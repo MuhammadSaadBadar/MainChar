@@ -9,6 +9,8 @@ import '../routes/app_routes.dart';
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/main_header.dart';
+import '../widgets/activity_chip.dart';
+import '../constants/university_activities.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -96,7 +98,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         return {
           'id': data['id'],
           'name': data['username'] ?? 'User',
-          'bio': data['bio'] ?? '',
+          'vibe_tags': List<String>.from(data['vibe_tags'] ?? []),
           'image': data['avatar_url'] as String?,
           'ratio': ratios[random.nextInt(ratios.length)],
         };
@@ -438,7 +440,7 @@ class _ProfileCard extends StatelessWidget {
                   'id': profile['id'],
                   'username': profile['name'],
                   'avatar_url': profile['image'],
-                  'bio': profile['bio'],
+                  'vibe_tags': profile['vibe_tags'],
                 },
               },
             );
@@ -525,17 +527,33 @@ class _ProfileCard extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                (profile['bio'] ?? '').toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.label(
-                                  10,
-                                  color: AppColors.primary,
-                                  letterSpacing: 1.0,
-                                  weight: FontWeight.bold,
+                              const SizedBox(height: 4),
+                              if (profile['vibe_tags'] != null &&
+                                  (profile['vibe_tags'] as List).isNotEmpty)
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  children: (profile['vibe_tags'] as List)
+                                      .take(2)
+                                      .map((tag) {
+                                    final activity = UniversityActivities.fromLabel(tag.toString());
+                                    return ActivityChip(
+                                      label: tag.toString(),
+                                      icon: activity?.icon ?? '✨',
+                                      isCompact: true,
+                                    );
+                                  }).toList(),
+                                )
+                              else
+                                Text(
+                                  'CAMPUS VIBE',
+                                  style: AppTextStyles.label(
+                                    10,
+                                    color: AppColors.primary,
+                                    letterSpacing: 1.0,
+                                    weight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ),

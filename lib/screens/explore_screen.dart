@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
@@ -7,7 +8,7 @@ import '../theme/app_theme.dart';
 import '../routes/app_routes.dart';
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/global_top_nav.dart';
+import '../widgets/main_header.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -19,20 +20,74 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   List<Map<String, dynamic>> _profiles = [];
   bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounce;
+  String? _avatarUrl;
+  String? _username;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (_searchQuery != query) {
+        setState(() {
+          _searchQuery = query;
+        });
+        _fetchProfiles();
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _fetchProfiles();
+    _fetchCurrentUser();
+  }
+
+  Future<void> _fetchCurrentUser() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+      final data = await Supabase.instance.client
+          .from('users')
+          .select('avatar_url, username')
+          .eq('id', userId)
+          .single();
+      if (mounted) {
+        setState(() {
+          _avatarUrl = data['avatar_url'] as String?;
+          _username = data['username'] as String?;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching current user: $e');
+    }
   }
 
   Future<void> _fetchProfiles() async {
     setState(() => _isLoading = true);
     try {
-      final List<dynamic> response = await Supabase.instance.client.rpc(
-        'get_explore_profiles',
-        params: {'profile_limit': 20},
-      );
+      List<dynamic> response;
+      if (_searchQuery.trim().isEmpty) {
+        response = await Supabase.instance.client.rpc(
+          'get_explore_profiles',
+          params: {'profile_limit': 20},
+        );
+      } else {
+        response = await Supabase.instance.client
+            .from('users')
+            .select()
+            .ilike('username', '%${_searchQuery.trim()}%')
+            .limit(20);
+      }
 
       final random = Random();
       final ratios = ['0.8', '1.0', '1.1', '1.25', '1.33'];
@@ -63,54 +118,65 @@ class _ExploreScreenState extends State<ExploreScreen> {
         children: [
           const _BackgroundBlobs(),
           const _GrainOverlay(),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                const _StickyNav(),
-                SliverPadding(
-                  padding: const EdgeInsets.all(24),
-                  sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1200),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _SearchHeader(),
-                            const SizedBox(height: 64),
-                            _isLoading
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                    ),
-                                  )
-                                : _profiles.isEmpty
-                                ? Center(
-                                    child: Text(
-                                      'No vibes found.',
-                                      style: AppTextStyles.body(
-                                        16,
-                                        color: AppColors.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  )
-                                : _MasonryFeed(profiles: _profiles),
-                            const SizedBox(height: 64),
-                            Center(
-                              child: _RefreshButton(
-                                isLoading: _isLoading,
-                                onRefresh: _fetchProfiles,
-                              ),
+          Column(
+            children: [
+              MainHeader(
+                title: 'EXPLORE',
+                avatarUrl: _avatarUrl,
+                username: _username,
+              ),
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(24),
+                      sliver: SliverToBoxAdapter(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1200),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _SearchHeader(
+                                  controller: _searchController,
+                                  onChanged: _onSearchChanged,
+                                ),
+                                const SizedBox(height: 64),
+                                _isLoading
+                                    ? const Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : _profiles.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          'No vibes found.',
+                                          style: AppTextStyles.body(
+                                            16,
+                                            color: AppColors.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      )
+                                    : _MasonryFeed(profiles: _profiles),
+                                const SizedBox(height: 64),
+                                Center(
+                                  child: _RefreshButton(
+                                    isLoading: _isLoading,
+                                    onRefresh: _fetchProfiles,
+                                  ),
+                                ),
+                                const _Footer(),
+                              ],
                             ),
-                            const _Footer(),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           // Mobile Bottom Nav
           if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
@@ -186,71 +252,13 @@ class _GrainOverlay extends StatelessWidget {
   }
 }
 
-class _StickyNav extends StatelessWidget {
-  const _StickyNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      backgroundColor: Colors.black.withOpacity(0.6),
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'CAMPUS VIBE',
-              style: AppTextStyles.headline(
-                24,
-                color: AppColors.secondary,
-                italic: true,
-              ),
-            ),
-            if (MediaQuery.of(context).size.width > 768) const GlobalTopNav(),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 1.5),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(
-                        'https://lh3.googleusercontent.com/aida-public/AB6AXuC6fasm5QX003DZ9i0rsg-TUrxgf5Pr6DbbSufbrOpED28yGOidd_a-rtC_w5eTzKOtLmTH6zN1LDzjYSCPtMePee1Xq5JFgK5PkO4dUMGMROL9sf4DoLse4cefwY0G33ZbTQRcm_b2z1g3w7GLCqWDAn5vT-cPHn_L98T0P6T_oR6KRnuja4vWpshDP-WPupc4M4O55qEuyMyVOzhM9f1fQqjY3BnjJXBosv2c3Crb3EU64U12cVQANXhUEsQbbxg-UgPkyrcYnHE',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // Obsolete _NavLink removed
 
 class _SearchHeader extends StatelessWidget {
-  const _SearchHeader();
+  final TextEditingController controller;
+  final Function(String) onChanged;
+
+  const _SearchHeader({required this.controller, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -273,6 +281,8 @@ class _SearchHeader extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: TextField(
+                  controller: controller,
+                  onChanged: onChanged,
                   style: AppTextStyles.body(18, weight: FontWeight.w500),
                   decoration: InputDecoration(
                     hintText: 'Search the campus elite...',
@@ -420,138 +430,140 @@ class _ProfileCard extends StatelessWidget {
     final ratio = double.parse(profile['ratio']!);
 
     return GestureDetector(
-      onTap: () {
-        Get.toNamed(AppRoutes.ARENA, arguments: {
-          'initialProfile': {
-            'id': profile['id'],
-            'username': profile['name'],
-            'avatar_url': profile['image'],
-            'bio': profile['bio'],
-          }
-        });
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.05),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
-            ),
-          ],
-        ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              children: [
-                AspectRatio(
-                  aspectRatio: ratio,
-                  child: profile['image'] != null
-                      ? Image.network(
-                          profile['image']!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[900],
-                              child: const Icon(
-                                Icons.person,
-                                size: 100,
-                                color: Colors.white10,
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          color: Colors.grey[900],
-                          child: const Icon(
-                            Icons.person,
-                            size: 100,
-                            color: Colors.white10,
-                          ),
-                        ),
-                ),
-                // Gradient Overlay
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.8),
-                        ],
-                        stops: const [0.4, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-                // Content
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  top: 32,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 8),
-                            Text(
-                              profile['name']!,
-                              style: AppTextStyles.headline(
-                                28,
-                                color: Colors.white,
-                                weight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              (profile['bio'] ?? 'Main Character')
-                                  .toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.label(
-                                10,
-                                color: AppColors.primary,
-                                letterSpacing: 1.0,
-                                weight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: const BoxDecoration(
-                          color: AppColors.secondary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.electric_bolt_rounded,
-                          color: Colors.black,
-                          size: 28,
-                        ),
-                      ),
-                    ],
-                  ),
+          onTap: () {
+            Get.toNamed(
+              AppRoutes.ARENA,
+              arguments: {
+                'initialProfile': {
+                  'id': profile['id'],
+                  'username': profile['name'],
+                  'avatar_url': profile['image'],
+                  'bio': profile['bio'],
+                },
+              },
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.05),
+                  blurRadius: 40,
+                  offset: const Offset(0, 20),
                 ),
               ],
             ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: ratio,
+                    child: profile['image'] != null
+                        ? Image.network(
+                            profile['image']!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[900],
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 100,
+                                  color: Colors.white10,
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[900],
+                            child: const Icon(
+                              Icons.person,
+                              size: 100,
+                              color: Colors.white10,
+                            ),
+                          ),
+                  ),
+                  // Gradient Overlay
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.8),
+                          ],
+                          stops: const [0.4, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Content
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    top: 32,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 8),
+                              Text(
+                                profile['name']!,
+                                style: AppTextStyles.headline(
+                                  28,
+                                  color: Colors.white,
+                                  weight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                (profile['bio'] ?? '').toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.label(
+                                  10,
+                                  color: AppColors.primary,
+                                  letterSpacing: 1.0,
+                                  weight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: const BoxDecoration(
+                            color: AppColors.secondary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.electric_bolt_rounded,
+                            color: Colors.black,
+                            size: 28,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      )
-      .animate()
-      .fadeIn(duration: 500.ms, delay: 200.ms)
-      .slideY(begin: 0.1, end: 0);
+        )
+        .animate()
+        .fadeIn(duration: 500.ms, delay: 200.ms)
+        .slideY(begin: 0.1, end: 0);
   }
 }
 

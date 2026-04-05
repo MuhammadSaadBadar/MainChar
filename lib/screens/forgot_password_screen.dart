@@ -225,7 +225,8 @@ class _RecoveryCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          width: 450,
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 450),
           padding: const EdgeInsets.all(40),
           decoration: BoxDecoration(
             color: const Color(0xFF262626).withOpacity(0.6),

@@ -149,9 +149,10 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
   }
 
   Widget _buildCardArena() {
-    return SizedBox(
+    return Container(
       height: MediaQuery.of(context).size.height * 0.55,
-      width: 400,
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 400),
       child: Stack(
         clipBehavior: Clip.none,
         children: [

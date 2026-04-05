@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Flexbox All Concepts Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h2 {
+            margin-top: 40px;
+        }
+
+        .container {
+            display: flex;
+            border: 2px solid black;
+            margin: 10px 0;
+            height: 150px;
+        }
+
+        .item {
+            background: lightblue;
+            border: 1px solid blue;
+            padding: 10px;
+            margin: 5px;
+        }
+
+        /* Example 1: flex-direction */
+        .direction {
+            flex-direction: row;
+        }
+
+        /* Example 2: justify-content */
+        .justify {
+            justify-content: space-between;
+        }
+
+        /* Example 3: align-items */
+        .align {
+            align-items: center;
+        }
+
+        /* Example 4: column direction */
+        .column {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        /* Example 5: wrap */
+        .wrap {
+            flex-wrap: wrap;
+            height: 120px;
+        }
+
+        /* Example 6: align-content (multi-line) */
+        .align-content {
+            flex-wrap: wrap;
+            align-content: space-around;
+            height: 200px;
+        }
+
+        /* Example 7: flex-grow */
+        .grow .item:nth-child(1) {
+            flex-grow: 1;
+        }
+
+        .grow .item:nth-child(2) {
+            flex-grow: 2;
+        }
+
+        .grow .item:nth-child(3) {
+            flex-grow: 1;
+        }
+
+        /* Example 8: flex shorthand */
+        .shorthand .item {
+            flex: 1 1 100px;
+        }
+
+        /* Example 9: align-self */
+        .self .item:nth-child(2) {
+            align-self: flex-end;
+            background: lightcoral;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Flexbox Complete Demo</h1>
+
+    <h2>1. Flex Direction (row)</h2>
+    <div class="container direction">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>2. Justify Content (space-between)</h2>
+    <div class="container justify">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>3. Align Items (center)</h2>
+    <div class="container align">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>4. Column Direction + Centering</h2>
+    <div class="container column">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>5. Flex Wrap</h2>
+    <div class="container wrap">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+        <div class="item">4</div>
+        <div class="item">5</div>
+    </div>
+
+    <h2>6. Align Content (multi-line)</h2>
+    <div class="container align-content">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+        <div class="item">4</div>
+        <div class="item">5</div>
+        <div class="item">6</div>
+    </div>
+
+    <h2>7. Flex Grow</h2>
+    <div class="container grow">
+        <div class="item">1</div>
+        <div class="item">2 (grows more)</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>8. Flex Shorthand (flex: 1 1 100px)</h2>
+    <div class="container shorthand">
+        <div class="item">1</div>
+        <div class="item">2</div>
+        <div class="item">3</div>
+    </div>
+
+    <h2>9. Align Self (override one item)</h2>
+    <div class="container self">
+        <div class="item">1</div>
+        <div class="item">2 (different)</div>
+        <div class="item">3</div>
+    </div>
+
+</body>
+
+</html>

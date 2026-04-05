@@ -297,58 +297,59 @@ class _SearchHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 32),
-        Row(
-          children: [
-            Text(
-              'TRENDING NOW:',
-              style: AppTextStyles.label(
-                10,
-                color: AppColors.onSurfaceVariant,
-                letterSpacing: 2.0,
-                weight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Wrap(
-              spacing: 8,
-              children: [
-                _TrendingChip(label: '#DesignMajor'),
-                _TrendingChip(label: '#VarsityVibe'),
-                _TrendingChip(label: '#MidnightStudio'),
-              ],
-            ),
-          ],
-        ),
+        //user dont want to implement this
+        // const SizedBox(height: 32),
+        // Row(
+        //   children: [
+        //     Text(
+        //       'TRENDING NOW:',
+        //       style: AppTextStyles.label(
+        //         10,
+        //         color: AppColors.onSurfaceVariant,
+        //         letterSpacing: 2.0,
+        //         weight: FontWeight.bold,
+        //       ),
+        //     ),
+        //     const SizedBox(width: 16),
+        //     const Wrap(
+        //       spacing: 8,
+        //       children: [
+        //         _TrendingChip(label: '#DesignMajor'),
+        //         _TrendingChip(label: '#VarsityVibe'),
+        //         _TrendingChip(label: '#MidnightStudio'),
+        //       ],
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }
 }
 
-class _TrendingChip extends StatelessWidget {
-  final String label;
-  const _TrendingChip({required this.label});
+// class _TrendingChip extends StatelessWidget {
+//   final String label;
+//   const _TrendingChip({required this.label});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(
-          12,
-          color: AppColors.primary,
-          weight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+//       decoration: BoxDecoration(
+//         color: AppColors.primary.withOpacity(0.05),
+//         border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+//         borderRadius: BorderRadius.circular(100),
+//       ),
+//       child: Text(
+//         label,
+//         style: AppTextStyles.label(
+//           12,
+//           color: AppColors.primary,
+//           weight: FontWeight.bold,
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class _MasonryFeed extends StatelessWidget {
   final List<Map<String, dynamic>> profiles;
@@ -518,12 +519,15 @@ class _ProfileCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 8),
-                              Text(
-                                profile['name']!,
-                                style: AppTextStyles.headline(
-                                  28,
-                                  color: Colors.white,
-                                  weight: FontWeight.w900,
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4.0),
+                                child: Text(
+                                  profile['name']!,
+                                  style: AppTextStyles.headline(
+                                    28,
+                                    color: Colors.white,
+                                    weight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -536,17 +540,21 @@ class _ProfileCard extends StatelessWidget {
                                   children: (profile['vibe_tags'] as List)
                                       .take(2)
                                       .map((tag) {
-                                    final activity = UniversityActivities.fromLabel(tag.toString());
-                                    return ActivityChip(
-                                      label: tag.toString(),
-                                      icon: activity?.icon ?? '✨',
-                                      isCompact: true,
-                                    );
-                                  }).toList(),
+                                        final activity =
+                                            UniversityActivities.fromLabel(
+                                              tag.toString(),
+                                            );
+                                        return ActivityChip(
+                                          label: tag.toString(),
+                                          icon: activity?.icon ?? '✨',
+                                          isCompact: true,
+                                        );
+                                      })
+                                      .toList(),
                                 )
                               else
                                 Text(
-                                  'CAMPUS VIBE',
+                                  '',
                                   style: AppTextStyles.label(
                                     10,
                                     color: AppColors.primary,

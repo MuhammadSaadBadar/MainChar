@@ -129,17 +129,20 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                           color: AppColors.primary,
                         ),
                       )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const _ArenaHeading(),
-                          const SizedBox(height: 32),
-                          _profiles.isEmpty
-                              ? _buildEmptyState()
-                              : _buildCardArena(),
-                          const SizedBox(height: 64),
-                          const _SwipeInstructions(),
-                        ],
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(vertical: 32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const _ArenaHeading(),
+                            const SizedBox(height: 32),
+                            _profiles.isEmpty
+                                ? _buildEmptyState()
+                                : _buildCardArena(),
+                            const SizedBox(height: 84), // Extra space for swipe buttons
+                            const _SwipeInstructions(),
+                          ],
+                        ),
                       ),
               ),
             ],

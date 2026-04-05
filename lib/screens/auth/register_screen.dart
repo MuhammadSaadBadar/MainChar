@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../theme/app_theme.dart';
-import '../routes/app_routes.dart';
-import '../services/auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -431,9 +431,9 @@ class _EditorialContent extends StatelessWidget {
               MediaQuery.of(context).size.width > 600 ? 64 : 48,
             ),
             children: [
-              const TextSpan(text: 'Join the \n'),
+              const TextSpan(text: 'See your \n'),
               TextSpan(
-                text: 'Campus Elite',
+                text: 'UOL Fame',
                 style: AppTextStyles.headline(
                   MediaQuery.of(context).size.width > 600 ? 64 : 48,
                   color: AppColors.secondary,

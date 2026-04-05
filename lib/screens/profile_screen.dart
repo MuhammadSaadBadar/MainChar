@@ -34,10 +34,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _aura = 0;
   StreamSubscription? _votesSubscription;
 
+  // Memories
+  List<Map<String, dynamic>> _memories = [];
+  bool _isMemoriesLoading = true;
+
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+    _fetchMemories();
     _checkRevealStatus();
     _initRealtimeVotes();
   }
@@ -61,19 +66,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
-    // Listen for real-time updates to votes where this user is the target
     _votesSubscription = Supabase.instance.client
         .from('votes')
         .stream(primaryKey: ['id'])
         .eq('target_id', user.id)
         .listen((List<Map<String, dynamic>> data) {
-          // Count only recognized votes
           final count = data.where((v) => v['is_recognized'] == true).length;
-
           if (mounted) {
             setState(() {
               _upvotesCount = count;
-              // Simple Aura calculation (e.g., 50 aura per recognition)
               _aura = count * 50;
             });
           }
@@ -101,6 +102,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _fetchMemories() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await Supabase.instance.client
+          .from('memories')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(5);
+
+      if (mounted) {
+        setState(() {
+          _memories = List<Map<String, dynamic>>.from(response);
+          _isMemoriesLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isMemoriesLoading = false);
+    }
+  }
+
+  Future<void> _deleteMemory(int id) async {
+    try {
+      await Supabase.instance.client.from('memories').delete().eq('id', id);
+      _fetchMemories();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete memory');
+    }
+  }
+
   void _toggleEdit() {
     setState(() {
       _isEditing = !_isEditing;
@@ -117,7 +150,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final bytes = await image.readAsBytes();
-      debugPrint('Selected image: ${image.name}, size: ${bytes.length} bytes');
       setState(() => _imageBytes = bytes);
     }
   }
@@ -134,10 +166,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_imageBytes != null) {
         final filePath =
             '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-        debugPrint('Uploading to Supabase (Web Binary): $filePath');
-
-        // Use uploadBinary to bypass the internal File check causing readAsBytesSync error on Web
         await (Supabase.instance.client.storage.from('avatars') as dynamic)
             .uploadBinary(
               filePath,
@@ -147,12 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 upsert: true,
               ),
             );
-
         avatarUrl = Supabase.instance.client.storage
             .from('avatars')
             .getPublicUrl(filePath);
-
-        debugPrint('Generated Public URL: $avatarUrl');
       }
 
       await Supabase.instance.client
@@ -177,6 +202,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } finally {
       setState(() => _isSaving = false);
     }
+  }
+
+  void _showDeleteConfirmation(int id) {
+    Get.defaultDialog(
+      title: 'Delete Memory?',
+      middleText: 'This action cannot be undone.',
+      backgroundColor: AppColors.surfaceContainerHigh,
+      titleStyle: AppTextStyles.headline(20),
+      middleTextStyle: AppTextStyles.body(16),
+      textConfirm: 'DELETE',
+      textCancel: 'CANCEL',
+      confirmTextColor: Colors.white,
+      buttonColor: AppColors.error,
+      onConfirm: () {
+        _deleteMemory(id);
+        Get.back();
+      },
+    );
+  }
+
+  void _showAddMemoryDialog() {
+    if (_memories.length >= 5) {
+      Get.snackbar('Limit Reached', 'You can only add up to 5 memories.');
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (context) => _AddMemoryDialog(
+        onMemoryAdded: () {
+          _fetchMemories();
+        },
+      ),
+    );
   }
 
   @override
@@ -231,7 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
-                              onTagsChanged: (tags) => setState(() => _selectedTags = tags),
+                              onTagsChanged: (tags) =>
+                                  setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                             );
                           } else {
@@ -247,7 +306,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
-                              onTagsChanged: (tags) => setState(() => _selectedTags = tags),
+                              onTagsChanged: (tags) =>
+                                  setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                             );
                           }
@@ -257,7 +317,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: _GallerySection()),
+              SliverToBoxAdapter(
+                child: _GallerySection(
+                  memories: _memories,
+                  isLoading: _isMemoriesLoading,
+                  onAddPress: _showAddMemoryDialog,
+                  onLongPressDelete: _showDeleteConfirmation,
+                ),
+              ),
               const SliverToBoxAdapter(child: _Footer()),
             ],
           ),
@@ -269,7 +336,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _BackgroundBlobs extends StatelessWidget {
   const _BackgroundBlobs();
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -312,7 +378,6 @@ extension _BlurExtension on Widget {
 
 class _GrainOverlay extends StatelessWidget {
   const _GrainOverlay();
-
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
@@ -356,17 +421,15 @@ class _HeroSection extends StatelessWidget {
         (userData?['avatar_url'] != null &&
             userData!['avatar_url'].toString().isNotEmpty) ||
         imageBytes != null;
-
     return Center(
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Circular Profile Image
           GestureDetector(
             onTap: isEditing ? onPickImage : null,
             child: Container(
-              width: isMobile ? 180 : 240,
-              height: isMobile ? 180 : 240,
+              width: isMobile ? 220 : 300,
+              height: isMobile ? 220 : 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.surfaceContainerHigh,
@@ -374,7 +437,7 @@ class _HeroSection extends StatelessWidget {
                   color: isEditing
                       ? AppColors.primary
                       : AppColors.primary.withOpacity(0.2),
-                  width: 4,
+                  width: 6,
                 ),
                 image: hasAvatar
                     ? DecorationImage(
@@ -398,7 +461,7 @@ class _HeroSection extends StatelessWidget {
                       isEditing
                           ? Icons.add_a_photo_rounded
                           : Icons.person_outline_rounded,
-                      size: 80,
+                      size: 100,
                       color: Colors.white10,
                     )
                   : (isEditing
@@ -416,7 +479,6 @@ class _HeroSection extends StatelessWidget {
                         : null),
             ),
           ),
-          // Edit Pen Icon
           if (!isEditing)
             Positioned(
               bottom: 8,
@@ -590,9 +652,7 @@ class _DesktopLayout extends StatelessWidget {
 class _Tag extends StatelessWidget {
   final String label;
   final bool isOutlined;
-
   const _Tag({required this.label, this.isOutlined = false});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -649,7 +709,6 @@ class _ContentSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -680,7 +739,6 @@ class _ContentSection extends StatelessWidget {
             ),
           const SizedBox(height: 32),
         ],
-        // Bio Section
         Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
@@ -721,15 +779,20 @@ class _ContentSection extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.add_circle_outline_rounded,
-                            color: AppColors.primary),
+                        const Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: 16),
                         Text(
                           selectedTags.isEmpty
                               ? 'ADD YOUR CAMPUS ACTIVITIES'
                               : '${selectedTags.length} ACTIVITIES SELECTED',
-                          style: AppTextStyles.label(12,
-                              color: AppColors.primary, weight: FontWeight.bold),
+                          style: AppTextStyles.label(
+                            12,
+                            color: AppColors.primary,
+                            weight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -827,13 +890,11 @@ class _StatBadge extends StatelessWidget {
   final String label;
   final String value;
   final bool isSecondary;
-
   const _StatBadge({
     required this.label,
     required this.value,
     this.isSecondary = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -868,7 +929,17 @@ class _StatBadge extends StatelessWidget {
 }
 
 class _GallerySection extends StatelessWidget {
-  const _GallerySection();
+  final List<Map<String, dynamic>> memories;
+  final bool isLoading;
+  final VoidCallback onAddPress;
+  final Function(int) onLongPressDelete;
+
+  const _GallerySection({
+    required this.memories,
+    required this.isLoading,
+    required this.onAddPress,
+    required this.onLongPressDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -891,50 +962,352 @@ class _GallerySection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'THE VAULT',
+                'MEMORIES AT UOL',
                 style: AppTextStyles.headline(32, weight: FontWeight.w900),
               ),
             ],
           ),
         ),
-        SizedBox(
-          height: 400,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 300,
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: AppColors.surfaceContainerHighest,
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      [
-                        'https://images.unsplash.com/photo-1535713222168-144b1393699c?w=500&q=80',
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=80',
-                        'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&q=80',
-                        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80',
-                        'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=500&q=80',
-                      ][index % 5],
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            },
-          ),
+        const SizedBox(height: 16),
+        _MemoriesList(
+          memories: memories,
+          isLoading: isLoading,
+          onAddPress: onAddPress,
+          onLongPressDelete: onLongPressDelete,
         ),
       ],
     );
   }
 }
 
+class _MemoriesList extends StatelessWidget {
+  final List<Map<String, dynamic>> memories;
+  final bool isLoading;
+  final VoidCallback onAddPress;
+  final Function(int) onLongPressDelete;
+  const _MemoriesList({
+    required this.memories,
+    required this.isLoading,
+    required this.onAddPress,
+    required this.onLongPressDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 400,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          if (index < memories.length) {
+            final memory = memories[index];
+            return GestureDetector(
+              onLongPress: () => onLongPressDelete(memory['id']),
+              child: _MemoryCard(
+                imageUrl: memory['image_url'],
+                description: memory['description'],
+              ),
+            );
+          }
+          if (index == memories.length)
+            return _AddMemoryPlaceholder(onTap: onAddPress);
+          return const _SkeletonMemory();
+        },
+      ),
+    );
+  }
+}
+
+class _MemoryCard extends StatelessWidget {
+  final String imageUrl;
+  final String description;
+  const _MemoryCard({required this.imageUrl, required this.description});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 300,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surfaceContainerHighest,
+        image: DecorationImage(
+          image: NetworkImage(imageUrl),
+          fit: BoxFit.cover,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                ),
+              ),
+              child: Text(
+                description,
+                style: AppTextStyles.body(14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddMemoryPlaceholder extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddMemoryPlaceholder({required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 300,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.3),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          color: AppColors.primary.withOpacity(0.05),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add_a_photo_rounded,
+                color: AppColors.primary,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'ADD NEW MEMORY',
+              style: AppTextStyles.label(
+                12,
+                color: AppColors.primary,
+                weight: FontWeight.bold,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonMemory extends StatelessWidget {
+  const _SkeletonMemory();
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.1,
+      child: Container(
+        width: 300,
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _AddMemoryDialog extends StatefulWidget {
+  final VoidCallback onMemoryAdded;
+  const _AddMemoryDialog({required this.onMemoryAdded});
+  @override
+  State<_AddMemoryDialog> createState() => _AddMemoryDialogState();
+}
+
+class _AddMemoryDialogState extends State<_AddMemoryDialog> {
+  final _descController = TextEditingController();
+  Uint8List? _imageBytes;
+  bool _isUploading = false;
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() => _imageBytes = bytes);
+    }
+  }
+
+  Future<void> _upload() async {
+    if (_imageBytes == null || _descController.text.trim().isEmpty) {
+      Get.snackbar('Error', 'Image and description required');
+      return;
+    }
+    setState(() => _isUploading = true);
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+      final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final filePath = '${user.id}/$fileName';
+      await (Supabase.instance.client.storage.from('memories') as dynamic)
+          .uploadBinary(
+            filePath,
+            _imageBytes!,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+      final imageUrl = Supabase.instance.client.storage
+          .from('memories')
+          .getPublicUrl(filePath);
+      await Supabase.instance.client.from('memories').insert({
+        'user_id': user.id,
+        'image_url': imageUrl,
+        'description': _descController.text.trim(),
+      });
+      widget.onMemoryAdded();
+      Get.back();
+      Get.snackbar('Success', 'Memory added!');
+    } catch (e) {
+      Get.snackbar('Error', 'Upload failed');
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        width: 450,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ADD NEW MEMORY', style: AppTextStyles.headline(24)),
+            const SizedBox(height: 8),
+            Text(
+              'Share a moment that defines your UOL journey.',
+              style: AppTextStyles.body(14, color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(16),
+                  image: _imageBytes != null
+                      ? DecorationImage(
+                          image: MemoryImage(_imageBytes!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _imageBytes == null
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_photo_alternate_outlined,
+                            size: 48,
+                            color: Colors.white24,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'PICK A PHOTO',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 32),
+            TextField(
+              controller: _descController,
+              maxLength: 100,
+              style: AppTextStyles.body(16),
+              decoration: InputDecoration(
+                hintText: 'Describe this memory...',
+                hintStyle: AppTextStyles.body(16, color: Colors.white24),
+                filled: true,
+                fillColor: AppColors.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isUploading ? null : _upload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                ),
+                child: _isUploading
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : const Text(
+                        'CAPTURE FOR ETERNITY',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Footer extends StatelessWidget {
   const _Footer();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -983,7 +1356,6 @@ class _Footer extends StatelessWidget {
 class _FooterLink extends StatelessWidget {
   final String label;
   const _FooterLink({required this.label});
-
   @override
   Widget build(BuildContext context) {
     return Text(

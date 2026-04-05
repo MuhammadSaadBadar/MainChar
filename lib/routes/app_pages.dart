@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
 import '../screens/splash_screen.dart';
-import '../screens/login_screen.dart';
-import '../screens/register_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
 import '../screens/voting_arena_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/forgot_password_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/explore_screen.dart';
 import 'app_routes.dart';
 

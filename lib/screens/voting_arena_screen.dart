@@ -139,7 +139,9 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                             _profiles.isEmpty
                                 ? _buildEmptyState()
                                 : _buildCardArena(),
-                            const SizedBox(height: 84), // Extra space for swipe buttons
+                            const SizedBox(
+                              height: 84,
+                            ), // Extra space for swipe buttons
                             const _SwipeInstructions(),
                           ],
                         ),
@@ -172,23 +174,6 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                   final profile = _profiles[index];
                   return _VotingCard(profile: profile);
                 },
-          ),
-          // Side Instructions
-          Positioned(
-            left: -80,
-            top: 0,
-            bottom: 60,
-            child: Center(
-              child: _SideLabel(label: 'SWIPE LEFT IF UNKNOWN', isLeft: true),
-            ),
-          ),
-          Positioned(
-            right: -80,
-            top: 0,
-            bottom: 60,
-            child: Center(
-              child: _SideLabel(label: 'KNOWN? SWIPE RIGHT', isLeft: false),
-            ),
           ),
           Positioned(
             bottom: -48,
@@ -461,32 +446,6 @@ class _VotingCard extends StatelessWidget {
   }
 }
 
-class _SideLabel extends StatelessWidget {
-  final String label;
-  final bool isLeft;
-
-  const _SideLabel({required this.label, required this.isLeft});
-
-  @override
-  Widget build(BuildContext context) {
-    // Hide side labels on very narrow screens
-    if (MediaQuery.of(context).size.width < 600) return const SizedBox.shrink();
-
-    return RotatedBox(
-      quarterTurns: isLeft ? 3 : 1,
-      child: Text(
-        label.toUpperCase(),
-        style: AppTextStyles.label(
-          10,
-          color: Colors.white.withOpacity(0.2),
-          letterSpacing: 4.0,
-          weight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
 class _ActionControls extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onVote;
@@ -605,16 +564,16 @@ class _SwipeInstructions extends StatelessWidget {
           const Icon(Icons.keyboard_arrow_left, size: 16, color: Colors.white),
           const SizedBox(width: 8),
           Text(
-            'SWIPE LEFT TO SKIP',
+            'UNKNOWN? SWIPE LEFT',
             style: AppTextStyles.label(
               10,
               color: Colors.white,
               letterSpacing: 2.0,
             ),
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 32),
           Text(
-            'SWIPE RIGHT TO VOTE',
+            'KNOW THIS GUY? SWIPE RIGHT',
             style: AppTextStyles.label(
               10,
               color: Colors.white,

@@ -2,9 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../theme/app_theme.dart';
-import '../routes/app_routes.dart';
-import '../services/auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../routes/app_routes.dart';
+import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -286,7 +286,7 @@ class _StickyHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'CAMPUS VIBE',
+              'WE AT UOL',
               style: AppTextStyles.headline(
                 24,
                 color: AppColors.secondary,

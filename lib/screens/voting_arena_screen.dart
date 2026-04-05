@@ -30,14 +30,16 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
 
   Future<void> _loadData() async {
     await Future.wait([_fetchCurrentUser(), _fetchProfiles()]);
-    
+
     final args = Get.arguments;
-    if (args != null && args is Map<String, dynamic> && args['initialProfile'] != null) {
+    if (args != null &&
+        args is Map<String, dynamic> &&
+        args['initialProfile'] != null) {
       final initialProfile = args['initialProfile'] as Map<String, dynamic>;
       _profiles.removeWhere((p) => p['id'] == initialProfile['id']);
       _profiles.insert(0, initialProfile);
     }
-    
+
     setState(() => _isLoading = false);
   }
 
@@ -64,10 +66,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     try {
       final List<dynamic> response = await Supabase.instance.client.rpc(
         'get_random_profiles',
-        params: {
-          'viewer_id': user.id,
-          'profile_limit': 10,
-        },
+        params: {'viewer_id': user.id, 'profile_limit': 10},
       );
 
       _profiles = List<Map<String, dynamic>>.from(response);
@@ -152,9 +151,9 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
 
   Widget _buildCardArena() {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.55,
+      height: MediaQuery.of(context).size.height * 0.60,
       width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 400),
+      constraints: const BoxConstraints(maxWidth: 420),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -172,7 +171,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                 },
           ),
           Positioned(
-            bottom: -32,
+            bottom: -48,
             left: 0,
             right: 0,
             child: _ActionControls(
@@ -279,7 +278,6 @@ class _GrainOverlay extends StatelessWidget {
   }
 }
 
-
 class _ArenaHeading extends StatelessWidget {
   const _ArenaHeading();
 
@@ -369,11 +367,31 @@ class _VotingCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-                stops: const [0.5, 1.0],
+                colors: [
+                  Colors.black.withOpacity(0.6),
+                  Colors.transparent,
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.8),
+                ],
+                stops: const [0.0, 0.2, 0.6, 1.0],
               ),
             ),
           ),
+          // Top Left Identity
+          Positioned(
+            top: 32,
+            left: 32,
+            child: Text(
+              (profile['username'] ?? 'User').toString().toUpperCase(),
+              style: AppTextStyles.headline(
+                MediaQuery.of(context).size.width > 600 ? 40 : 32,
+                weight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          // Bottom Content (Activities Only)
           Positioned(
             bottom: 32,
             left: 32,
@@ -381,57 +399,15 @@ class _VotingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${profile['username'] ?? 'User'}, 21',
-                      style: AppTextStyles.headline(
-                        32,
-                        weight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'PRO',
-                        style: AppTextStyles.label(
-                          10,
-                          color: Colors.black,
-                          weight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'MAIN CHARACTER',
-                  style: AppTextStyles.label(
-                    14,
-                    color: AppColors.secondary,
-                    weight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const SizedBox(height: 8),
                 if (profile['vibe_tags'] != null &&
                     (profile['vibe_tags'] as List).isNotEmpty)
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: (profile['vibe_tags'] as List).map((tag) {
-                      final activity =
-                          UniversityActivities.fromLabel(tag.toString());
+                      final activity = UniversityActivities.fromLabel(
+                        tag.toString(),
+                      );
                       return ActivityChip(
                         label: tag.toString(),
                         icon: activity?.icon ?? '✨',
@@ -449,7 +425,6 @@ class _VotingCard extends StatelessWidget {
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
-                const SizedBox(height: 24),
               ],
             ),
           ),

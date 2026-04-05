@@ -34,13 +34,14 @@ class AppTextStyles {
     Color color = AppColors.onSurface,
     FontWeight weight = FontWeight.w900,
     bool italic = false,
+    double? letterSpacing,
   }) {
     return GoogleFonts.epilogue(
       fontSize: size,
       color: color,
       fontWeight: weight,
       fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-      letterSpacing: -1.0,
+      letterSpacing: letterSpacing ?? -1.0,
     );
   }
 

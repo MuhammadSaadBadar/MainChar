@@ -297,59 +297,10 @@ class _SearchHeader extends StatelessWidget {
             ],
           ),
         ),
-        //user dont want to implement this
-        // const SizedBox(height: 32),
-        // Row(
-        //   children: [
-        //     Text(
-        //       'TRENDING NOW:',
-        //       style: AppTextStyles.label(
-        //         10,
-        //         color: AppColors.onSurfaceVariant,
-        //         letterSpacing: 2.0,
-        //         weight: FontWeight.bold,
-        //       ),
-        //     ),
-        //     const SizedBox(width: 16),
-        //     const Wrap(
-        //       spacing: 8,
-        //       children: [
-        //         _TrendingChip(label: '#DesignMajor'),
-        //         _TrendingChip(label: '#VarsityVibe'),
-        //         _TrendingChip(label: '#MidnightStudio'),
-        //       ],
-        //     ),
-        //   ],
-        // ),
       ],
     );
   }
 }
-
-// class _TrendingChip extends StatelessWidget {
-//   final String label;
-//   const _TrendingChip({required this.label});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-//       decoration: BoxDecoration(
-//         color: AppColors.primary.withOpacity(0.05),
-//         border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-//         borderRadius: BorderRadius.circular(100),
-//       ),
-//       child: Text(
-//         label,
-//         style: AppTextStyles.label(
-//           12,
-//           color: AppColors.primary,
-//           weight: FontWeight.bold,
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class _MasonryFeed extends StatelessWidget {
   final List<Map<String, dynamic>> profiles;

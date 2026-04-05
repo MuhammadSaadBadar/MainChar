@@ -173,6 +173,23 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                   return _VotingCard(profile: profile);
                 },
           ),
+          // Side Instructions
+          Positioned(
+            left: -80,
+            top: 0,
+            bottom: 60,
+            child: Center(
+              child: _SideLabel(label: 'SWIPE LEFT IF UNKNOWN', isLeft: true),
+            ),
+          ),
+          Positioned(
+            right: -80,
+            top: 0,
+            bottom: 60,
+            child: Center(
+              child: _SideLabel(label: 'KNOWN? SWIPE RIGHT', isLeft: false),
+            ),
+          ),
           Positioned(
             bottom: -48,
             left: 0,
@@ -440,6 +457,32 @@ class _VotingCard extends StatelessWidget {
     return Container(
       color: Colors.grey[900],
       child: const Icon(Icons.person, size: 100, color: Colors.white10),
+    );
+  }
+}
+
+class _SideLabel extends StatelessWidget {
+  final String label;
+  final bool isLeft;
+
+  const _SideLabel({required this.label, required this.isLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    // Hide side labels on very narrow screens
+    if (MediaQuery.of(context).size.width < 600) return const SizedBox.shrink();
+
+    return RotatedBox(
+      quarterTurns: isLeft ? 3 : 1,
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.label(
+          10,
+          color: Colors.white.withOpacity(0.2),
+          letterSpacing: 4.0,
+          weight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

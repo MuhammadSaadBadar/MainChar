@@ -11,6 +11,7 @@ import '../widgets/main_header.dart';
 import '../widgets/activity_chip.dart';
 import '../widgets/activity_picker_sheet.dart';
 import '../constants/university_activities.dart';
+import '../routes/app_routes.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -35,9 +36,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _aura = 0;
   StreamSubscription? _votesSubscription;
 
+  String? _targetUserId;
+  bool _isSelfProfile = true;
+
   @override
   void initState() {
     super.initState();
+    final args = Get.arguments as Map<String, dynamic>?;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+    // Use provided userId or fallback to current auth user
+    _targetUserId = args != null && args['userId'] != null
+        ? args['userId'] as String
+        : currentUserId;
+
+    _isSelfProfile = _targetUserId == currentUserId;
+
     _fetchUserData();
     _checkRevealStatus();
     _initRealtimeVotes();
@@ -59,14 +73,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _initRealtimeVotes() {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (_targetUserId == null) return;
 
-    // Listen for real-time updates to votes where this user is the target
+    // Listen for real-time updates to votes where the target user is the target
     _votesSubscription = Supabase.instance.client
         .from('votes')
         .stream(primaryKey: ['id'])
-        .eq('target_id', user.id)
+        .eq('target_id', _targetUserId!)
         .listen((List<Map<String, dynamic>> data) {
           // Count only recognized votes
           final count = data.where((v) => v['is_recognized'] == true).length;
@@ -82,20 +95,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _fetchUserData() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (_targetUserId == null) return;
 
     try {
       final response = await Supabase.instance.client
           .from('users')
           .select()
-          .eq('id', user.id)
+          .eq('id', _targetUserId!)
           .single();
 
       final memoriesResponse = await Supabase.instance.client
           .from('memories')
           .select()
-          .eq('user_id', user.id)
+          .eq('user_id', _targetUserId!)
           .order('created_at', ascending: false);
 
       setState(() {
@@ -298,6 +310,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onTagsChanged: (tags) =>
                                   setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
+                              isSelfProfile: _isSelfProfile,
                             );
                           } else {
                             return _MobileLayout(
@@ -315,6 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               onTagsChanged: (tags) =>
                                   setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
+                              isSelfProfile: _isSelfProfile,
                             );
                           }
                         },
@@ -328,6 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   memories: _memories,
                   onUpload: _handleUploadMemory,
                   onDelete: _handleDeleteMemory,
+                  isSelfProfile: _isSelfProfile,
                 ),
               ),
               const SliverToBoxAdapter(child: _Footer()),
@@ -412,6 +427,7 @@ class _HeroSection extends StatelessWidget {
   final bool isEditing;
   final VoidCallback? onPickImage;
   final Uint8List? imageBytes;
+  final bool isSelfProfile;
 
   const _HeroSection({
     this.userData,
@@ -420,6 +436,7 @@ class _HeroSection extends StatelessWidget {
     this.isEditing = false,
     this.onPickImage,
     this.imageBytes,
+    this.isSelfProfile = true,
   });
 
   @override
@@ -489,7 +506,7 @@ class _HeroSection extends StatelessWidget {
             ),
           ),
           // Edit Pen Icon
-          if (!isEditing)
+          if (!isEditing && isSelfProfile)
             Positioned(
               bottom: 8,
               right: 8,
@@ -534,6 +551,7 @@ class _MobileLayout extends StatelessWidget {
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
   final bool isSaving;
+  final bool isSelfProfile;
 
   const _MobileLayout({
     this.userData,
@@ -549,6 +567,7 @@ class _MobileLayout extends StatelessWidget {
     required this.onSave,
     required this.onTagsChanged,
     required this.isSaving,
+    this.isSelfProfile = true,
   });
 
   @override
@@ -569,6 +588,7 @@ class _MobileLayout extends StatelessWidget {
             isEditing: isEditing,
             onPickImage: onPickImage,
             imageBytes: imageBytes,
+            isSelfProfile: isSelfProfile,
           ),
         ),
         const SizedBox(height: 48),
@@ -583,6 +603,7 @@ class _MobileLayout extends StatelessWidget {
           isSaving: isSaving,
           upvotesCount: upvotesCount,
           aura: aura,
+          isSelfProfile: isSelfProfile,
         ),
       ],
     );
@@ -603,6 +624,7 @@ class _DesktopLayout extends StatelessWidget {
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
   final bool isSaving;
+  final bool isSelfProfile;
 
   const _DesktopLayout({
     this.userData,
@@ -618,6 +640,7 @@ class _DesktopLayout extends StatelessWidget {
     required this.onSave,
     required this.onTagsChanged,
     required this.isSaving,
+    this.isSelfProfile = true,
   });
 
   @override
@@ -635,6 +658,7 @@ class _DesktopLayout extends StatelessWidget {
               isEditing: isEditing,
               onPickImage: onPickImage,
               imageBytes: imageBytes,
+              isSelfProfile: isSelfProfile,
             ),
           ),
         ),
@@ -652,6 +676,7 @@ class _DesktopLayout extends StatelessWidget {
             isSaving: isSaving,
             upvotesCount: upvotesCount,
             aura: aura,
+            isSelfProfile: isSelfProfile,
           ),
         ),
       ],
@@ -704,6 +729,7 @@ class _ContentSection extends StatelessWidget {
   final bool isSaving;
   final int upvotesCount;
   final int aura;
+  final bool isSelfProfile;
 
   const _ContentSection({
     this.userData,
@@ -716,6 +742,7 @@ class _ContentSection extends StatelessWidget {
     this.isSaving = false,
     required this.upvotesCount,
     required this.aura,
+    this.isSelfProfile = true,
   });
 
   @override
@@ -753,135 +780,208 @@ class _ContentSection extends StatelessWidget {
           const SizedBox(height: 32),
         ],
         // Bio Section
-        Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'THE ORIGIN STORY',
-                style: AppTextStyles.label(
-                  10,
-                  color: AppColors.primary,
-                  letterSpacing: 3.0,
-                  weight: FontWeight.bold,
-                ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
               ),
-              const SizedBox(height: 16),
-              if (isEditing)
-                GestureDetector(
-                  onTap: () {
-                    Get.bottomSheet(
-                      ActivityPickerSheet(
-                        initialSelected: selectedTags,
-                        onSave: onTagsChanged ?? (_) {},
-                      ),
-                      isScrollControlled: true,
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.03),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'THE ORIGIN STORY',
+                    style: AppTextStyles.label(
+                      10,
+                      color: AppColors.primary,
+                      letterSpacing: 3.0,
+                      weight: FontWeight.bold,
                     ),
-                    child: Row(
+                  ),
+                  const SizedBox(height: 24),
+                  if (isEditing && isSelfProfile)
+                    GestureDetector(
+                      onTap: () {
+                        Get.bottomSheet(
+                          ActivityPickerSheet(
+                            initialSelected: selectedTags,
+                            onSave: onTagsChanged ?? (_) {},
+                          ),
+                          isScrollControlled: true,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              selectedTags.isEmpty
+                                  ? 'ADD YOUR CAMPUS ACTIVITIES'
+                                  : '${selectedTags.length} ACTIVITIES SELECTED',
+                              style: AppTextStyles.label(
+                                12,
+                                color: AppColors.primary,
+                                weight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (selectedTags.isEmpty)
+                    Text(
+                      'No activities selected yet.',
+                      style: AppTextStyles.body(
+                        18,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: selectedTags.map((tag) {
+                        final activity = UniversityActivities.fromLabel(tag);
+                        return ActivityChip(
+                          label: tag,
+                          icon: activity?.icon ?? '✨',
+                          isCompact: true,
+                        );
+                      }).toList(),
+                    ),
+                  if (isEditing && isSelfProfile) ...[
+                    const SizedBox(height: 32),
+                    Row(
                       children: [
-                        const Icon(
-                          Icons.add_circle_outline_rounded,
-                          color: AppColors.primary,
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isSaving ? null : onSave,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: isSaving
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'SAVE CHANGES',
+                                    style: AppTextStyles.label(
+                                      12,
+                                      color: Colors.white,
+                                      weight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        Text(
-                          selectedTags.isEmpty
-                              ? 'ADD YOUR CAMPUS ACTIVITIES'
-                              : '${selectedTags.length} ACTIVITIES SELECTED',
-                          style: AppTextStyles.label(
-                            12,
-                            color: AppColors.primary,
-                            weight: FontWeight.bold,
+                        TextButton(
+                          onPressed: isSaving ? null : onCancel,
+                          child: Text(
+                            'CANCEL',
+                            style: AppTextStyles.label(
+                              12,
+                              color: Colors.white54,
+                              letterSpacing: 2.0,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                )
-              else if (selectedTags.isEmpty)
-                Text(
-                  'No activities selected yet.',
-                  style: AppTextStyles.body(
-                    18,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: selectedTags.map((tag) {
-                    final activity = UniversityActivities.fromLabel(tag);
-                    return ActivityChip(
-                      label: tag,
-                      icon: activity?.icon ?? '✨',
-                      isCompact: true,
-                    );
-                  }).toList(),
-                ),
-              if (isEditing) ...[
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
+                  ],
+                  if (!isSelfProfile) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: isSaving ? null : onSave,
+                        onPressed: () {
+                          Get.toNamed(
+                            AppRoutes.ARENA,
+                            arguments: {
+                              'initialProfile': {
+                                'id': userData?['id'],
+                                'username': userData?['username'],
+                                'avatar_url': userData?['avatar_url'],
+                                'vibe_tags': userData?['vibe_tags'],
+                              },
+                            },
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: AppColors.secondary,
                           foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          elevation: 20,
+                          shadowColor: AppColors.secondary.withOpacity(0.3),
                         ),
-                        child: isSaving
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.black,
-                                ),
-                              )
-                            : const Text('SAVE CHANGES'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    TextButton(
-                      onPressed: isSaving ? null : onCancel,
-                      child: const Text(
-                        'CANCEL',
-                        style: TextStyle(color: Colors.white54),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.electric_bolt_rounded, size: 20),
+                            const SizedBox(width: 12),
+                            Text(
+                              'VOTE FOR THIS USER',
+                              style: AppTextStyles.label(
+                                12,
+                                color: Colors.black,
+                                weight: FontWeight.w900,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ],
-              const SizedBox(height: 32),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _StatBadge(label: 'UPVOTES', value: upvotesCount.toString()),
-                  _StatBadge(label: 'AURA', value: aura.toString()),
-                  const _StatBadge(
-                    label: 'STREAK',
-                    value: '0',
-                    isSecondary: true,
+                  const SizedBox(height: 48),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _StatBadge(
+                        label: 'UPVOTES',
+                        value: upvotesCount.toString(),
+                      ),
+                      _StatBadge(label: 'AURA', value: aura.toString()),
+                      const _StatBadge(
+                        label: 'STREAK',
+                        value: '0',
+                        isSecondary: true,
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
         if (!isDesktop && isEditing) ...[
@@ -914,10 +1014,11 @@ class _StatBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHighest.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,16 +1027,18 @@ class _StatBadge extends StatelessWidget {
             label,
             style: AppTextStyles.label(
               8,
-              color: AppColors.onSurfaceVariant,
+              color: AppColors.onSurfaceVariant.withOpacity(0.6),
+              letterSpacing: 2.0,
               weight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             value,
             style: AppTextStyles.headline(
-              20,
-              color: isSecondary ? AppColors.secondary : AppColors.onSurface,
+              24,
+              color: isSecondary ? AppColors.secondary : Colors.white,
+              weight: FontWeight.w900,
             ),
           ),
         ],
@@ -989,96 +1092,176 @@ class _AddMemoryDialogState extends State<_AddMemoryDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: AppColors.surfaceContainerHigh),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ADD MEMORY', style: AppTextStyles.headline(24)),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
-                  image: _imageBytes != null
-                      ? DecorationImage(
-                          image: MemoryImage(_imageBytes!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: _imageBytes == null
-                    ? const Center(
-                        child: Icon(
-                          Icons.add_a_photo,
-                          size: 48,
-                          color: Colors.white24,
-                        ),
-                      )
-                    : null,
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
               ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _captionController,
-              style: AppTextStyles.body(14),
-              decoration: InputDecoration(
-                hintText: 'What happened?',
-                hintStyle: AppTextStyles.body(
-                  14,
-                  color: AppColors.onSurfaceVariant,
-                ),
-                filled: true,
-                fillColor: AppColors.surfaceContainerHighest,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isUploading ? null : _handleUpload,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'COLLECTIONS',
+                            style: AppTextStyles.label(
+                              10,
+                              color: AppColors.primary,
+                              letterSpacing: 3.0,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'ADD MEMORY',
+                            style: AppTextStyles.headline(
+                              24,
+                              weight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                      ),
+                    ],
                   ),
-                ),
-                child: _isUploading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.black,
+                  const SizedBox(height: 32),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      height: 240,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerHighest.withOpacity(
+                          0.5,
                         ),
-                      )
-                    : Text(
-                        'POST MEMORY',
-                        style: AppTextStyles.label(
-                          12,
-                          color: Colors.black,
-                          weight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: _imageBytes != null
+                              ? AppColors.primary.withOpacity(0.5)
+                              : Colors.white10,
+                        ),
+                        image: _imageBytes != null
+                            ? DecorationImage(
+                                image: MemoryImage(_imageBytes!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: _imageBytes == null
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.add_a_photo_outlined,
+                                    size: 48,
+                                    color: AppColors.primary.withOpacity(0.5),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'SELECT A PHOTO',
+                                    style: AppTextStyles.label(
+                                      10,
+                                      color: Colors.white38,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _captionController,
+                    style: AppTextStyles.body(16),
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Share the vibe of this moment...',
+                      hintStyle: AppTextStyles.body(
+                        16,
+                        color: AppColors.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surfaceContainerHighest.withOpacity(
+                        0.3,
+                      ),
+                      contentPadding: const EdgeInsets.all(20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.05),
                         ),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: AppColors.primary.withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isUploading ? null : _handleUpload,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isUploading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'POST MEMORY',
+                              style: AppTextStyles.label(
+                                12,
+                                color: Colors.white,
+                                weight: FontWeight.bold,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1089,11 +1272,13 @@ class _MemoriesSection extends StatelessWidget {
   final List<Map<String, dynamic>> memories;
   final Future<void> Function(Uint8List, String) onUpload;
   final Future<void> Function(int) onDelete;
+  final bool isSelfProfile;
 
   const _MemoriesSection({
     required this.memories,
     required this.onUpload,
     required this.onDelete,
+    this.isSelfProfile = true,
   });
 
   void _showAddDialog(BuildContext context) {
@@ -1103,183 +1288,401 @@ class _MemoriesSection extends StatelessWidget {
     );
   }
 
+  void _showDeleteDialog(BuildContext context, int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        title: Text('Delete Memory?', style: AppTextStyles.headline(20)),
+        content: Text(
+          'This action cannot be undone.',
+          style: AppTextStyles.body(14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: AppTextStyles.label(12)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              onDelete(id);
+            },
+            child: Text(
+              'Delete',
+              style: AppTextStyles.label(12, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMemoryDetail(BuildContext context, Map<String, dynamic> memory) {
+    Get.bottomSheet(
+      _MemoryDetailSheet(memory: memory),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.7),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'COLLECTIONS',
+                            style: AppTextStyles.label(
+                              10,
+                              color: AppColors.primary,
+                              letterSpacing: 3.0,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'MEMORIES AT UOL',
+                            style: AppTextStyles.headline(
+                              24,
+                              weight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (isSelfProfile)
+                        IconButton(
+                          onPressed: () => _showAddDialog(context),
+                          icon: const Icon(
+                            Icons.add_circle_outline,
+                            color: AppColors.primary,
+                            size: 32,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  height: 280,
+                  child: memories.isEmpty
+                      ? (isSelfProfile
+                            ? ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                ),
+                                itemCount: 3,
+                                itemBuilder: (context, index) {
+                                  return GestureDetector(
+                                    onTap: index == 0
+                                        ? () => _showAddDialog(context)
+                                        : null,
+                                    child: Container(
+                                      width: 220,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 24,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        color:
+                                            AppColors.surfaceContainerHighest,
+                                        border: index == 0
+                                            ? Border.all(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.5),
+                                                width: 2,
+                                              )
+                                            : null,
+                                      ),
+                                      child: index == 0
+                                          ? const Center(
+                                              child: Icon(
+                                                Icons.add,
+                                                size: 48,
+                                                color: AppColors.primary,
+                                              ),
+                                            )
+                                          : const Center(
+                                              child: Icon(
+                                                Icons.image,
+                                                size: 48,
+                                                color: Colors.white10,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Center(
+                                child: Text(
+                                  'NO MEMORIES SHARED YET',
+                                  style: AppTextStyles.label(
+                                    12,
+                                    color: Colors.white24,
+                                    letterSpacing: 2.0,
+                                  ),
+                                ),
+                              ))
+                      : ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemCount: memories.length,
+                          itemBuilder: (context, index) {
+                            final memory = memories[index];
+                            return GestureDetector(
+                              onTap: () => _showMemoryDetail(context, memory),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: 220,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 24,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      color: AppColors.surfaceContainerHighest,
+                                      image: DecorationImage(
+                                        image: NetworkImage(
+                                          memory['image_url'],
+                                        ),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withOpacity(0.7),
+                                          ],
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            memory['description'],
+                                            style: AppTextStyles.body(
+                                              12,
+                                              color: Colors.white,
+                                              weight: FontWeight.bold,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Delete Icon
+                                  if (isSelfProfile)
+                                    Positioned(
+                                      top: 32,
+                                      right: 16,
+                                      child: GestureDetector(
+                                        onTap: () => _showDeleteDialog(
+                                          context,
+                                          memory['id'],
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(
+                                              sigmaX: 10,
+                                              sigmaY: 10,
+                                            ),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black45,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white10,
+                                                ),
+                                              ),
+                                              child: const Icon(
+                                                Icons.close_rounded,
+                                                color: Colors.white70,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MemoryDetailSheet extends StatelessWidget {
+  final Map<String, dynamic> memory;
+
+  const _MemoryDetailSheet({required this.memory});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh.withOpacity(0.9),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'COLLECTIONS',
-                    style: AppTextStyles.label(
-                      12,
-                      color: AppColors.primary,
-                      letterSpacing: 4.0,
-                      weight: FontWeight.bold,
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'MEMORIES AT UOL',
-                    style: AppTextStyles.headline(32, weight: FontWeight.w900),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'COLLECTIONS',
+                            style: AppTextStyles.label(
+                              10,
+                              color: AppColors.primary,
+                              letterSpacing: 3.0,
+                              weight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'MEMORY DETAIL',
+                            style: AppTextStyles.headline(
+                              24,
+                              weight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Get.back(),
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.network(
+                      memory['image_url'],
+                      width: double.infinity,
+                      height: 300,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Text(
+                      memory['description'],
+                      style: AppTextStyles.body(
+                        18,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        elevation: 20,
+                        shadowColor: AppColors.primary.withOpacity(0.3),
+                      ),
+                      child: Text(
+                        'CLOSE',
+                        style: AppTextStyles.label(
+                          12,
+                          weight: FontWeight.bold,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              IconButton(
-                onPressed: () => _showAddDialog(context),
-                icon: const Icon(
-                  Icons.add_circle_outline,
-                  color: AppColors.primary,
-                  size: 32,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        SizedBox(
-          height: 300,
-          child: memories.isEmpty
-              ? ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  itemCount: 3,
-                  itemBuilder: (context, index) {
-                    return GestureDetector(
-                      onTap: index == 0 ? () => _showAddDialog(context) : null,
-                      child: Container(
-                        width: 220,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 24,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: AppColors.surfaceContainerHighest,
-                          border: index == 0
-                              ? Border.all(
-                                  color: AppColors.primary.withOpacity(0.5),
-                                  width: 2,
-                                )
-                              : null,
-                        ),
-                        child: index == 0
-                            ? const Center(
-                                child: Icon(
-                                  Icons.add,
-                                  size: 48,
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            : const Center(
-                                child: Icon(
-                                  Icons.image,
-                                  size: 48,
-                                  color: Colors.white10,
-                                ),
-                              ),
-                      ),
-                    );
-                  },
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  itemCount: memories.length,
-                  itemBuilder: (context, index) {
-                    final memory = memories[index];
-                    return GestureDetector(
-                      onLongPress: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: AppColors.surfaceContainerHigh,
-                            title: Text(
-                              'Delete Memory?',
-                              style: AppTextStyles.headline(20),
-                            ),
-                            content: Text(
-                              'This action cannot be undone.',
-                              style: AppTextStyles.body(14),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                child: Text(
-                                  'Cancel',
-                                  style: AppTextStyles.label(12),
-                                ),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.error,
-                                ),
-                                onPressed: () {
-                                  Navigator.of(ctx).pop();
-                                  onDelete(memory['id']);
-                                },
-                                child: Text(
-                                  'Delete',
-                                  style: AppTextStyles.label(
-                                    12,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 220,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 24,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: AppColors.surfaceContainerHighest,
-                          image: DecorationImage(
-                            image: NetworkImage(memory['image_url']),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.8),
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(16),
-                          alignment: Alignment.bottomLeft,
-                          child: Text(
-                            memory['description'],
-                            style: AppTextStyles.body(
-                              14,
-                              weight: FontWeight.w500,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
+      ),
     );
   }
 }

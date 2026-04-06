@@ -244,29 +244,35 @@ class _Header extends StatelessWidget {
       elevation: 0,
       automaticallyImplyLeading: false,
       title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'CAMPUS VIBE',
-              style: AppTextStyles.headline(
-                24,
-                color: AppColors.secondary,
-                italic: true,
+            Flexible(
+              child: Text(
+                'CAMPUS VIBE',
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 400 ? 24 : 18,
+                  color: AppColors.secondary,
+                  italic: true,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (MediaQuery.of(context).size.width > 768)
-              Row(
-                children: [
-                  _HeaderLink(label: 'Register', active: true, onTap: () {}),
-                  const SizedBox(width: 32),
-                  _HeaderLink(
-                    label: 'Login',
-                    onTap: () => Get.toNamed(AppRoutes.LOGIN),
-                  ),
-                ],
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _HeaderLink(label: 'Register', active: true, onTap: () {}),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width > 400 ? 32 : 16,
+                ),
+                _HeaderLink(
+                  label: 'Login',
+                  onTap: () => Get.toNamed(AppRoutes.LOGIN),
+                ),
+              ],
+            ),
+            const SizedBox(width: 8),
             const Icon(
               Icons.school_outlined,
               color: AppColors.primary,

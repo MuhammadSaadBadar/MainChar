@@ -386,15 +386,8 @@ class _ProfileCard extends StatelessWidget {
     return GestureDetector(
           onTap: () {
             Get.toNamed(
-              AppRoutes.ARENA,
-              arguments: {
-                'initialProfile': {
-                  'id': profile['id'],
-                  'username': profile['name'],
-                  'avatar_url': profile['image'],
-                  'vibe_tags': profile['vibe_tags'],
-                },
-              },
+              AppRoutes.PROFILE,
+              arguments: {'userId': profile['id']},
             );
           },
           child: Container(
@@ -517,17 +510,35 @@ class _ProfileCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: const BoxDecoration(
-                            color: AppColors.secondary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.electric_bolt_rounded,
-                            color: Colors.black,
-                            size: 28,
+                        GestureDetector(
+                          onTap: () {
+                            Get.toNamed(
+                              AppRoutes.ARENA,
+                              arguments: {
+                                'initialProfile': {
+                                  'id': profile['id'],
+                                  'username': profile['name'],
+                                  'avatar_url': profile['image'],
+                                  'vibe_tags': profile['vibe_tags'],
+                                },
+                              },
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Container(
+                              width: 56,
+                              height: 56,
+                              decoration: const BoxDecoration(
+                                color: AppColors.secondary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.electric_bolt_rounded,
+                                color: Colors.black,
+                                size: 28,
+                              ),
+                            ),
                           ),
                         ),
                       ],

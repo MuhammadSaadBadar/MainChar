@@ -81,7 +81,10 @@ class _ActivityPickerSheetState extends State<ActivityPickerSheet> {
                     const SizedBox(height: 8),
                     Text(
                       'PICK UP TO 6 ACTIVITIES',
-                      style: AppTextStyles.headline(24, weight: FontWeight.w900),
+                      style: AppTextStyles.headline(
+                        24,
+                        weight: FontWeight.w900,
+                      ),
                     ),
                   ],
                 ),
@@ -99,9 +102,15 @@ class _ActivityPickerSheetState extends State<ActivityPickerSheet> {
                   children: [
                     _buildCategory('🏆 SPORTS', UniversityActivities.sports),
                     const SizedBox(height: 32),
-                    _buildCategory('🎭 SOCIETIES & CLUBS', UniversityActivities.societies),
+                    _buildCategory(
+                      '🎭 SOCIETIES & CLUBS',
+                      UniversityActivities.societies,
+                    ),
                     const SizedBox(height: 32),
-                    _buildCategory('🎨 INTERESTS & HOBBIES', UniversityActivities.interests),
+                    _buildCategory(
+                      '🎨 INTERESTS & HOBBIES',
+                      UniversityActivities.interests,
+                    ),
                     const SizedBox(height: 48),
                   ],
                 ),
@@ -124,7 +133,10 @@ class _ActivityPickerSheetState extends State<ActivityPickerSheet> {
                 ),
                 child: const Text(
                   'CONFIRM SELECTIONS',
-                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                  ),
                 ),
               ),
             ),

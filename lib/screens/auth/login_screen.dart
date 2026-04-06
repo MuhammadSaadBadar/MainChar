@@ -281,29 +281,35 @@ class _StickyHeader extends StatelessWidget {
       automaticallyImplyLeading: false,
       toolbarHeight: 80,
       title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'WE AT UOL',
-              style: AppTextStyles.headline(
-                24,
-                color: AppColors.secondary,
-                italic: true,
+            Flexible(
+              child: Text(
+                'WE AT UOL',
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 400 ? 24 : 18,
+                  color: AppColors.secondary,
+                  italic: true,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (MediaQuery.of(context).size.width > 600)
-              Row(
-                children: [
-                  _NavButton(
-                    label: 'Register',
-                    onTap: () => Get.toNamed(AppRoutes.REGISTER),
-                  ),
-                  const SizedBox(width: 32),
-                  const _NavButton(label: 'Login', active: true),
-                ],
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _NavButton(
+                  label: 'Register',
+                  onTap: () => Get.toNamed(AppRoutes.REGISTER),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width > 400 ? 32 : 16,
+                ),
+                const _NavButton(label: 'Login', active: true),
+              ],
+            ),
+            const SizedBox(width: 8),
             const Icon(Icons.school, color: AppColors.primary, size: 24),
           ],
         ),

@@ -37,7 +37,9 @@ class AuthController extends GetxController {
     final user = _supabase.auth.currentUser;
 
     if (user == null) {
-      Get.offAllNamed(AppRoutes.LOGIN);
+      if (Get.currentRoute != AppRoutes.LOGIN) {
+        Get.offAllNamed(AppRoutes.LOGIN);
+      }
       isLoading.value = false;
       return;
     }

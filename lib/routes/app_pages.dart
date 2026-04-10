@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import '../screens/splash/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/voting_arena_screen.dart';
@@ -10,14 +9,9 @@ import '../screens/explore_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {
-  static const INITIAL = AppRoutes.SPLASH;
+  static const INITIAL = AppRoutes.LOGIN;
 
   static final routes = [
-    GetPage(
-      name: AppRoutes.SPLASH,
-      page: () => const SplashScreen(),
-      transition: Transition.fade,
-    ),
     GetPage(
       name: AppRoutes.LOGIN,
       page: () => const LoginScreen(),

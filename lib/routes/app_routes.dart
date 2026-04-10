@@ -1,5 +1,4 @@
 abstract class AppRoutes {
-  static const String SPLASH = '/splash';
   static const String LOGIN = '/login';
   static const String PROFILE_SETUP = '/profile_setup';
   static const String NAV = '/nav';

@@ -46,24 +46,9 @@ class MainHeader extends StatelessWidget {
                       weight: FontWeight.w900,
                     ),
                   ),
-                  if (!isMobile) ...[
-                    const GlobalTopNav(),
-                  ],
+                  if (!isMobile) ...[const GlobalTopNav()],
                   Row(
                     children: [
-                      if (showSecondaryAction) ...[
-                        const Icon(
-                          Icons.local_fire_department,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 20),
-                      ],
-                      const Icon(
-                        Icons.notifications_outlined, 
-                        color: AppColors.primary,
-                        size: 24,
-                      ),
                       const SizedBox(width: 20),
                       Container(
                         width: 36,
@@ -84,8 +69,11 @@ class MainHeader extends StatelessWidget {
                         child: avatarUrl == null
                             ? Center(
                                 child: Text(
-                                  (username ?? 'U').substring(0, 1).toUpperCase(),
-                                  style: AppTextStyles.label(12, 
+                                  (username ?? 'U')
+                                      .substring(0, 1)
+                                      .toUpperCase(),
+                                  style: AppTextStyles.label(
+                                    12,
                                     color: AppColors.primary,
                                     weight: FontWeight.bold,
                                   ),

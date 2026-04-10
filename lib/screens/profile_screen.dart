@@ -12,6 +12,8 @@ import '../widgets/activity_chip.dart';
 import '../widgets/activity_picker_sheet.dart';
 import '../constants/university_activities.dart';
 import '../routes/app_routes.dart';
+import '../controllers/auth_controller.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -255,7 +257,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _handleLogout() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        title: Text(
+          'LOGOUT',
+          style: AppTextStyles.label(18, weight: FontWeight.w900, color: AppColors.secondary),
+        ),
+        content: Text(
+          'Are you sure you want to end your session?',
+          style: AppTextStyles.body(16, color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'CANCEL',
+              style: AppTextStyles.label(12, color: Colors.white54, letterSpacing: 1.5),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.find<AuthController>().signOut();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withOpacity(0.1),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(100),
+                side: const BorderSide(color: Colors.redAccent, width: 1),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              'LOGOUT',
+              style: AppTextStyles.label(12, weight: FontWeight.bold, letterSpacing: 1.5),
+            ),
+          ),
+        ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      barrierColor: Colors.black87,
+    );
+  }
+
   @override
+
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
@@ -311,7 +361,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                               isSelfProfile: _isSelfProfile,
+                              onLogout: _handleLogout,
                             );
+
                           } else {
                             return _MobileLayout(
                               userData: _userData,
@@ -329,7 +381,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   setState(() => _selectedTags = tags),
                               isSaving: _isSaving,
                               isSelfProfile: _isSelfProfile,
+                              onLogout: _handleLogout,
                             );
+
                           }
                         },
                       ),
@@ -550,8 +604,9 @@ class _MobileLayout extends StatelessWidget {
   final VoidCallback onPickImage;
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
-  final bool isSaving;
+   final bool isSaving;
   final bool isSelfProfile;
+  final VoidCallback onLogout;
 
   const _MobileLayout({
     this.userData,
@@ -568,7 +623,9 @@ class _MobileLayout extends StatelessWidget {
     required this.onTagsChanged,
     required this.isSaving,
     this.isSelfProfile = true,
+    required this.onLogout,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -602,10 +659,12 @@ class _MobileLayout extends StatelessWidget {
           onTagsChanged: onTagsChanged,
           isSaving: isSaving,
           upvotesCount: upvotesCount,
-          aura: aura,
+           aura: aura,
           isSelfProfile: isSelfProfile,
+          onLogout: onLogout,
         ),
       ],
+
     );
   }
 }
@@ -623,8 +682,9 @@ class _DesktopLayout extends StatelessWidget {
   final VoidCallback onPickImage;
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
-  final bool isSaving;
+   final bool isSaving;
   final bool isSelfProfile;
+  final VoidCallback onLogout;
 
   const _DesktopLayout({
     this.userData,
@@ -641,7 +701,9 @@ class _DesktopLayout extends StatelessWidget {
     required this.onTagsChanged,
     required this.isSaving,
     this.isSelfProfile = true,
+    required this.onLogout,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -675,11 +737,13 @@ class _DesktopLayout extends StatelessWidget {
             onTagsChanged: onTagsChanged,
             isSaving: isSaving,
             upvotesCount: upvotesCount,
-            aura: aura,
+             aura: aura,
             isSelfProfile: isSelfProfile,
+            onLogout: onLogout,
           ),
         ),
       ],
+
     );
   }
 }
@@ -730,6 +794,8 @@ class _ContentSection extends StatelessWidget {
   final int upvotesCount;
   final int aura;
   final bool isSelfProfile;
+  final VoidCallback? onLogout;
+
 
   const _ContentSection({
     this.userData,
@@ -743,7 +809,9 @@ class _ContentSection extends StatelessWidget {
     required this.upvotesCount,
     required this.aura,
     this.isSelfProfile = true,
+    this.onLogout,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -972,15 +1040,62 @@ class _ContentSection extends StatelessWidget {
                         value: upvotesCount.toString(),
                       ),
                       _StatBadge(label: 'AURA', value: aura.toString()),
-                      const _StatBadge(
+                       const _StatBadge(
                         label: 'STREAK',
                         value: '0',
                         isSecondary: true,
                       ),
                     ],
                   ),
+                  if (isSelfProfile && !isEditing) ...[
+                    const SizedBox(height: 48),
+                    Container(
+                      width: double.infinity,
+                      height: 1,
+                      color: Colors.white.withOpacity(0.05),
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: onLogout,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Colors.redAccent.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          backgroundColor: Colors.redAccent.withOpacity(0.03),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.logout_rounded,
+                              color: Colors.redAccent.withOpacity(0.7),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'LOGOUT FROM CAMPUS',
+                              style: AppTextStyles.label(
+                                12,
+                                color: Colors.redAccent.withOpacity(0.8),
+                                weight: FontWeight.bold,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
+
             ),
           ),
         ),

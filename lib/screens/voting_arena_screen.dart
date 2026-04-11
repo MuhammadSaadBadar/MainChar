@@ -205,11 +205,11 @@ class _BackgroundImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: Opacity(
-        opacity: 0.5,
+        opacity: 0.4,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset('assets/voting_background.jfif', fit: BoxFit.cover),
+            Image.asset('assets/voting_background.jpg', fit: BoxFit.cover),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(

@@ -414,7 +414,7 @@ class _BackgroundImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: Opacity(
-        opacity: 0.12,
+        opacity: 0.4,
         child: Stack(
           fit: StackFit.expand,
           children: [

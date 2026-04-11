@@ -76,8 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          const _RadialGradients(),
-          const _BackgroundBlobs(),
+          const _AuthBackground(),
           const _GrainOverlay(),
           SafeArea(
             child: CustomScrollView(
@@ -155,44 +154,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _RadialGradients extends StatelessWidget {
-  const _RadialGradients();
+class _AuthBackground extends StatelessWidget {
+  const _AuthBackground();
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(-1.0, -1.0),
-                radius: 1.2,
-                colors: [
-                  AppColors.primary.withOpacity(0.05),
-                  Colors.transparent,
-                ],
-              ),
-            ),
+        Positioned.fill(
+          child: Image.asset(
+            'assets/login_register_background.jpeg',
+            fit: BoxFit.cover,
           ),
         ),
-        Positioned(
-          bottom: 0,
-          right: 0,
+        Positioned.fill(
           child: Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
             decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(1.0, 1.0),
-                radius: 1.2,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
                 colors: [
-                  AppColors.secondary.withOpacity(0.05),
-                  Colors.transparent,
+                  Colors.black.withOpacity(0.6),
+                  Colors.black.withOpacity(0.8),
                 ],
               ),
             ),
@@ -203,48 +186,6 @@ class _RadialGradients extends StatelessWidget {
   }
 }
 
-class _BackgroundBlobs extends StatelessWidget {
-  const _BackgroundBlobs();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned(
-          top: MediaQuery.of(context).size.height * 0.25,
-          left: -100,
-          child: Container(
-            width: 500,
-            height: 500,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.15),
-            ),
-          ).withBlur(120),
-        ),
-        Positioned(
-          bottom: MediaQuery.of(context).size.height * 0.25,
-          right: -100,
-          child: Container(
-            width: 600,
-            height: 600,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.secondary.withOpacity(0.15),
-            ),
-          ).withBlur(150),
-        ),
-      ],
-    );
-  }
-}
-
-extension _BlurExtension on Widget {
-  Widget withBlur(double sigma) => ImageFiltered(
-    imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-    child: this,
-  );
-}
 
 class _GrainOverlay extends StatelessWidget {
   const _GrainOverlay();

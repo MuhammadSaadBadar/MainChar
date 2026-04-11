@@ -34,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          const _BackgroundBlobs(),
+          const _AuthBackground(),
           const _GrainOverlay(),
           SafeArea(
             child: CustomScrollView(
@@ -166,48 +166,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-class _BackgroundBlobs extends StatelessWidget {
-  const _BackgroundBlobs();
+class _AuthBackground extends StatelessWidget {
+  const _AuthBackground();
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned(
-          top: -100,
-          left: -100,
-          child: Container(
-            width: 400,
-            height: 400,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary.withOpacity(0.12),
-            ),
-          ).withBlur(120),
+        Positioned.fill(
+          child: Image.asset(
+            'assets/login_register_background.jpeg',
+            fit: BoxFit.cover,
+          ),
         ),
-        Positioned(
-          bottom: 100,
-          right: -100,
+        Positioned.fill(
           child: Container(
-            width: 400,
-            height: 400,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.secondary.withOpacity(0.08),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.6),
+                  Colors.black.withOpacity(0.8),
+                ],
+              ),
             ),
-          ).withBlur(120),
+          ),
         ),
       ],
     );
   }
 }
 
-extension _BlurExtension on Widget {
-  Widget withBlur(double sigma) => ImageFiltered(
-    imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-    child: this,
-  );
-}
 
 class _GrainOverlay extends StatelessWidget {
   const _GrainOverlay();

@@ -113,15 +113,12 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const _BackgroundImage(),
           const _MainCharacterGradient(),
           const _GrainOverlay(),
           Column(
             children: [
-              MainHeader(
-                title: 'ARENA',
-                avatarUrl: _currentUserProfile?['avatar_url'],
-                username: _currentUserProfile?['username'],
-              ),
+              const MainHeader(title: 'ARENA'),
               Expanded(
                 child: _isLoading
                     ? const Center(
@@ -159,33 +156,17 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
       height: MediaQuery.of(context).size.height * 0.60,
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 420),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          CardSwiper(
-            controller: _controller,
-            cardsCount: _profiles.length,
-            onSwipe: _handleSwipe,
-            numberOfCardsDisplayed: _profiles.length == 1 ? 1 : 2,
-            backCardOffset: const Offset(4, -10),
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            cardBuilder:
-                (context, index, horizontalThreshold, verticalThreshold) {
-                  final profile = _profiles[index];
-                  return _VotingCard(profile: profile);
-                },
-          ),
-          Positioned(
-            bottom: -48,
-            left: 0,
-            right: 0,
-            child: _ActionControls(
-              onSkip: () => _controller.swipe(CardSwiperDirection.left),
-              onVote: () => _controller.swipe(CardSwiperDirection.right),
-              onAction: () => _controller.swipe(CardSwiperDirection.right),
-            ),
-          ),
-        ],
+      child: CardSwiper(
+        controller: _controller,
+        cardsCount: _profiles.length,
+        onSwipe: _handleSwipe,
+        numberOfCardsDisplayed: _profiles.length == 1 ? 1 : 2,
+        backCardOffset: const Offset(4, -10),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        cardBuilder: (context, index, horizontalThreshold, verticalThreshold) {
+          final profile = _profiles[index];
+          return _VotingCard(profile: profile);
+        },
       ),
     );
   }
@@ -213,6 +194,39 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
           style: AppTextStyles.body(14, color: AppColors.onSurfaceVariant),
         ),
       ],
+    );
+  }
+}
+
+class _BackgroundImage extends StatelessWidget {
+  const _BackgroundImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.5,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/voting_background.jfif', fit: BoxFit.cover),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.2,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.background.withOpacity(0.8),
+                    AppColors.background,
+                  ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -355,7 +369,7 @@ class _VotingCard extends StatelessWidget {
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -363,6 +377,18 @@ class _VotingCard extends StatelessWidget {
             Image.network(
               avatarUrl,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary.withOpacity(0.5),
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                );
+              },
               errorBuilder: (c, e, s) => _buildPlaceholder(),
             )
           else
@@ -422,7 +448,7 @@ class _VotingCard extends StatelessWidget {
                   )
                 else
                   Text(
-                    profile['bio'] ?? 'MAIN CHARACTER VIBE',
+                    profile['bio'] ?? 'No bio yet',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.body(
@@ -446,143 +472,80 @@ class _VotingCard extends StatelessWidget {
   }
 }
 
-class _ActionControls extends StatelessWidget {
-  final VoidCallback onSkip;
-  final VoidCallback onVote;
-  final VoidCallback onAction;
-
-  const _ActionControls({
-    required this.onSkip,
-    required this.onVote,
-    required this.onAction,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _CircleButton(icon: Icons.close, onTap: onSkip, size: 56),
-        const SizedBox(width: 24),
-        GestureDetector(
-          onTap: onAction,
-          child: Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.secondary.withOpacity(0.4),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.bolt, color: Colors.black, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  'KNOW THIS GUY',
-                  style: AppTextStyles.headline(
-                    14,
-                    color: Colors.black,
-                    weight: FontWeight.w900,
-                    italic: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        _CircleButton(
-          icon: Icons.favorite,
-          onTap: onVote,
-          size: 56,
-          isPrimary: true,
-        ),
-      ],
-    );
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final double size;
-  final bool isPrimary;
-
-  const _CircleButton({
-    required this.icon,
-    required this.onTap,
-    required this.size,
-    this.isPrimary = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainerHigh,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Icon(
-          icon,
-          color: isPrimary ? AppColors.primary : AppColors.onSurfaceVariant,
-          size: size * 0.5,
-        ),
-      ),
-    );
-  }
-}
-
 class _SwipeInstructions extends StatelessWidget {
   const _SwipeInstructions();
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.4,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.keyboard_arrow_left, size: 16, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(
-            'UNKNOWN? SWIPE LEFT',
-            style: AppTextStyles.label(
-              10,
-              color: Colors.white,
-              letterSpacing: 2.0,
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(100),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
-          const SizedBox(width: 32),
-          Text(
-            'KNOW THIS GUY? SWIPE RIGHT',
-            style: AppTextStyles.label(
-              10,
-              color: Colors.white,
-              letterSpacing: 2.0,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.keyboard_arrow_left,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'DK THIS PERSON?',
+                style: AppTextStyles.label(
+                  11,
+                  color: Colors.white70,
+                  weight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              Text(
+                ' SWIPE LEFT',
+                style: AppTextStyles.label(
+                  11,
+                  color: AppColors.primary,
+                  weight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Container(width: 1, height: 12, color: Colors.white10),
+              const SizedBox(width: 24),
+              Text(
+                'KNOW THIS GUY?',
+                style: AppTextStyles.label(
+                  11,
+                  color: Colors.white70,
+                  weight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              Text(
+                ' SWIPE RIGHT',
+                style: AppTextStyles.label(
+                  11,
+                  color: AppColors.secondary,
+                  weight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.keyboard_arrow_right,
+                size: 18,
+                color: AppColors.secondary,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.keyboard_arrow_right, size: 16, color: Colors.white),
-        ],
+        ),
       ),
     );
   }

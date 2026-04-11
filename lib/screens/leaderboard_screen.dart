@@ -109,10 +109,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             slivers: [
               // Top Navigation Bar (Integrated directly into sliver)
               SliverToBoxAdapter(
-                child: MainHeader(
+                child: const MainHeader(
                   title: 'CAMPUS VIBE',
-                  avatarUrl: _currentUserProfile?['avatar_url'],
-                  username: _currentUserProfile?['username'],
                 ),
               ),
 
@@ -603,6 +601,7 @@ class _Avatar extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(size),
+            clipBehavior: Clip.antiAliasWithSaveLayer,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -610,6 +609,19 @@ class _Avatar extends StatelessWidget {
                   Image.network(
                     url,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: color.withOpacity(0.5),
+                          strokeWidth: 2,
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
                     errorBuilder: (c, e, s) =>
                         Container(color: AppColors.surfaceContainerHighest),
                   )

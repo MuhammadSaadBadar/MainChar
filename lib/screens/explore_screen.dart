@@ -118,15 +118,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const _BackgroundImage(),
           const _BackgroundBlobs(),
           const _GrainOverlay(),
           Column(
             children: [
-              MainHeader(
-                title: 'EXPLORE',
-                avatarUrl: _avatarUrl,
-                username: _username,
-              ),
+              const MainHeader(title: 'EXPLORE'),
               Expanded(
                 child: CustomScrollView(
                   slivers: [
@@ -183,6 +180,39 @@ class _ExploreScreenState extends State<ExploreScreen> {
           // Mobile Bottom Nav
           if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
         ],
+      ),
+    );
+  }
+}
+
+class _BackgroundImage extends StatelessWidget {
+  const _BackgroundImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.4,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/explore_background.jpg', fit: BoxFit.cover),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.2,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.background.withOpacity(0.8),
+                    AppColors.background,
+                  ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -402,6 +432,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
               ],
             ),
+            clipBehavior: Clip.antiAliasWithSaveLayer,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: Stack(
@@ -412,6 +443,20 @@ class _ProfileCard extends StatelessWidget {
                         ? Image.network(
                             profile['image']!,
                             fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  strokeWidth: 2,
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
+                            },
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 color: Colors.grey[900],

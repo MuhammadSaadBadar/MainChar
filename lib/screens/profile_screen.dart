@@ -14,7 +14,6 @@ import '../constants/university_activities.dart';
 import '../routes/app_routes.dart';
 import '../controllers/auth_controller.dart';
 
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -47,7 +46,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final args = Get.arguments as Map<String, dynamic>?;
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
 
-    // Use provided userId or fallback to current auth user
     _targetUserId = args != null && args['userId'] != null
         ? args['userId'] as String
         : currentUserId;
@@ -77,19 +75,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _initRealtimeVotes() {
     if (_targetUserId == null) return;
 
-    // Listen for real-time updates to votes where the target user is the target
     _votesSubscription = Supabase.instance.client
         .from('votes')
         .stream(primaryKey: ['id'])
         .eq('target_id', _targetUserId!)
         .listen((List<Map<String, dynamic>> data) {
-          // Count only recognized votes
           final count = data.where((v) => v['is_recognized'] == true).length;
-
           if (mounted) {
             setState(() {
               _upvotesCount = count;
-              // Simple Aura calculation (e.g., 50 aura per recognition)
               _aura = count * 50;
             });
           }
@@ -164,7 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         debugPrint('Uploading to Supabase (Web Binary): $filePath');
 
-        // Use uploadBinary to bypass the internal File check causing readAsBytesSync error on Web
         await (Supabase.instance.client.storage.from('avatars') as dynamic)
             .uploadBinary(
               filePath,
@@ -192,6 +185,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .eq('id', user.id);
 
       await _fetchUserData();
+      await Get.find<AuthController>().refreshUserProfile();
+
       setState(() => _isEditing = false);
       Get.snackbar(
         'Success',
@@ -263,7 +258,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: AppColors.surfaceContainerHigh,
         title: Text(
           'LOGOUT',
-          style: AppTextStyles.label(18, weight: FontWeight.w900, color: AppColors.secondary),
+          style: AppTextStyles.label(
+            18,
+            weight: FontWeight.w900,
+            color: AppColors.secondary,
+          ),
         ),
         content: Text(
           'Are you sure you want to end your session?',
@@ -274,7 +273,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Get.back(),
             child: Text(
               'CANCEL',
-              style: AppTextStyles.label(12, color: Colors.white54, letterSpacing: 1.5),
+              style: AppTextStyles.label(
+                12,
+                color: Colors.white54,
+                letterSpacing: 1.5,
+              ),
             ),
           ),
           ElevatedButton(
@@ -294,7 +297,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Text(
               'LOGOUT',
-              style: AppTextStyles.label(12, weight: FontWeight.bold, letterSpacing: 1.5),
+              style: AppTextStyles.label(
+                12,
+                weight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
             ),
           ),
         ],
@@ -305,7 +312,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
-
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
@@ -320,17 +326,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
+          const _BackgroundImage(),
           const _BackgroundBlobs(),
           const _GrainOverlay(),
           CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(
-                child: MainHeader(
-                  title: 'CAMPUS VIBE',
-                  avatarUrl: _userData?['avatar_url'],
-                  username: _userData?['username'],
-                ),
-              ),
+              SliverToBoxAdapter(child: MainHeader(title: 'CAMPUS VIBE')),
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 24,
@@ -363,7 +364,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isSelfProfile: _isSelfProfile,
                               onLogout: _handleLogout,
                             );
-
                           } else {
                             return _MobileLayout(
                               userData: _userData,
@@ -383,7 +383,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isSelfProfile: _isSelfProfile,
                               onLogout: _handleLogout,
                             );
-
                           }
                         },
                       ),
@@ -403,6 +402,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BackgroundImage extends StatelessWidget {
+  const _BackgroundImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.12,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/profile_background.jfif', fit: BoxFit.cover),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.2,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.background.withOpacity(0.8),
+                    AppColors.background,
+                  ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -519,15 +551,6 @@ class _HeroSection extends StatelessWidget {
                       : AppColors.primary.withOpacity(0.2),
                   width: 4,
                 ),
-                image: hasAvatar
-                    ? DecorationImage(
-                        image: imageBytes != null
-                            ? MemoryImage(imageBytes!)
-                            : NetworkImage(userData!['avatar_url'])
-                                  as ImageProvider,
-                        fit: BoxFit.cover,
-                      )
-                    : null,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.5),
@@ -536,16 +559,48 @@ class _HeroSection extends StatelessWidget {
                   ),
                 ],
               ),
-              child: !hasAvatar
-                  ? Icon(
-                      isEditing
-                          ? Icons.add_a_photo_rounded
-                          : Icons.person_outline_rounded,
-                      size: 80,
-                      color: Colors.white10,
-                    )
-                  : (isEditing
-                        ? Container(
+              clipBehavior: Clip.antiAliasWithSaveLayer,
+              // FIX: Single unified child using Stack for overlay support
+              child: hasAvatar
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        imageBytes != null
+                            ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                            : Image.network(
+                                userData!['avatar_url'],
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          color: AppColors.primary.withOpacity(
+                                            0.3,
+                                          ),
+                                          strokeWidth: 2,
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 80,
+                                      color: Colors.white10,
+                                    ),
+                              ),
+                        // Camera overlay when editing
+                        if (isEditing)
+                          Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.black.withOpacity(0.3),
@@ -555,11 +610,19 @@ class _HeroSection extends StatelessWidget {
                               color: Colors.white70,
                               size: 40,
                             ),
-                          )
-                        : null),
+                          ),
+                      ],
+                    )
+                  : Icon(
+                      isEditing
+                          ? Icons.add_a_photo_rounded
+                          : Icons.person_outline_rounded,
+                      size: 80,
+                      color: Colors.white10,
+                    ),
             ),
           ),
-          // Edit Pen Icon
+          // Edit Pen Icon — shown only when not editing and it's self profile
           if (!isEditing && isSelfProfile)
             Positioned(
               bottom: 8,
@@ -604,7 +667,7 @@ class _MobileLayout extends StatelessWidget {
   final VoidCallback onPickImage;
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
-   final bool isSaving;
+  final bool isSaving;
   final bool isSelfProfile;
   final VoidCallback onLogout;
 
@@ -625,7 +688,6 @@ class _MobileLayout extends StatelessWidget {
     this.isSelfProfile = true,
     required this.onLogout,
   });
-
 
   @override
   Widget build(BuildContext context) {
@@ -659,12 +721,11 @@ class _MobileLayout extends StatelessWidget {
           onTagsChanged: onTagsChanged,
           isSaving: isSaving,
           upvotesCount: upvotesCount,
-           aura: aura,
+          aura: aura,
           isSelfProfile: isSelfProfile,
           onLogout: onLogout,
         ),
       ],
-
     );
   }
 }
@@ -682,7 +743,7 @@ class _DesktopLayout extends StatelessWidget {
   final VoidCallback onPickImage;
   final VoidCallback onSave;
   final Function(List<String>) onTagsChanged;
-   final bool isSaving;
+  final bool isSaving;
   final bool isSelfProfile;
   final VoidCallback onLogout;
 
@@ -703,7 +764,6 @@ class _DesktopLayout extends StatelessWidget {
     this.isSelfProfile = true,
     required this.onLogout,
   });
-
 
   @override
   Widget build(BuildContext context) {
@@ -737,13 +797,12 @@ class _DesktopLayout extends StatelessWidget {
             onTagsChanged: onTagsChanged,
             isSaving: isSaving,
             upvotesCount: upvotesCount,
-             aura: aura,
+            aura: aura,
             isSelfProfile: isSelfProfile,
             onLogout: onLogout,
           ),
         ),
       ],
-
     );
   }
 }
@@ -796,7 +855,6 @@ class _ContentSection extends StatelessWidget {
   final bool isSelfProfile;
   final VoidCallback? onLogout;
 
-
   const _ContentSection({
     this.userData,
     this.isEditing = false,
@@ -811,7 +869,6 @@ class _ContentSection extends StatelessWidget {
     this.isSelfProfile = true,
     this.onLogout,
   });
-
 
   @override
   Widget build(BuildContext context) {
@@ -847,7 +904,6 @@ class _ContentSection extends StatelessWidget {
             ),
           const SizedBox(height: 32),
         ],
-        // Bio Section
         ClipRRect(
           borderRadius: BorderRadius.circular(32),
           child: BackdropFilter(
@@ -1040,7 +1096,7 @@ class _ContentSection extends StatelessWidget {
                         value: upvotesCount.toString(),
                       ),
                       _StatBadge(label: 'AURA', value: aura.toString()),
-                       const _StatBadge(
+                      const _StatBadge(
                         label: 'STREAK',
                         value: '0',
                         isSecondary: true,
@@ -1082,8 +1138,8 @@ class _ContentSection extends StatelessWidget {
                             Text(
                               'LOGOUT FROM CAMPUS',
                               style: AppTextStyles.label(
-                                12,
-                                color: Colors.redAccent.withOpacity(0.8),
+                                14,
+                                color: Colors.white.withOpacity(0.8),
                                 weight: FontWeight.bold,
                                 letterSpacing: 2.0,
                               ),
@@ -1095,7 +1151,6 @@ class _ContentSection extends StatelessWidget {
                   ],
                 ],
               ),
-
             ),
           ),
         ),
@@ -1582,47 +1637,69 @@ class _MemoriesSection extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       color: AppColors.surfaceContainerHighest,
-                                      image: DecorationImage(
-                                        image: NetworkImage(
-                                          memory['image_url'],
-                                        ),
-                                        fit: BoxFit.cover,
-                                      ),
                                     ),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(16),
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            Colors.transparent,
-                                            Colors.black.withOpacity(0.7),
-                                          ],
+                                    clipBehavior: Clip.antiAliasWithSaveLayer,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.network(
+                                          memory['image_url'],
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.2),
+                                                strokeWidth: 2,
+                                                value:
+                                                    loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                              .cumulativeBytesLoaded /
+                                                          loadingProgress
+                                                              .expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      ),
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            memory['description'],
-                                            style: AppTextStyles.body(
-                                              12,
-                                              color: Colors.white,
-                                              weight: FontWeight.bold,
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.black.withOpacity(0.7),
+                                              ],
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ],
-                                      ),
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                memory['description'],
+                                                style: AppTextStyles.body(
+                                                  12,
+                                                  color: Colors.white,
+                                                  weight: FontWeight.bold,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  // Delete Icon
                                   if (isSelfProfile)
                                     Positioned(
                                       top: 32,
@@ -1748,6 +1825,23 @@ class _MemoryDetailSheet extends StatelessWidget {
                       width: double.infinity,
                       height: 300,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 300,
+                          width: double.infinity,
+                          color: AppColors.surfaceContainerHighest,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary.withOpacity(0.5),
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 32),

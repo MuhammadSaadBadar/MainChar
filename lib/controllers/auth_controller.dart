@@ -7,6 +7,7 @@ class AuthController extends GetxController {
   final _supabase = Supabase.instance.client;
   final Rx<User?> currentUser = Rx<User?>(null);
   final RxBool isLoading = true.obs;
+  final RxMap<String, dynamic> userProfile = <String, dynamic>{}.obs;
 
   @override
   void onInit() {
@@ -57,6 +58,7 @@ class AuthController extends GetxController {
         Get.offAllNamed(AppRoutes.ARENA);
       } else {
         // Profile found
+        userProfile.assignAll(response);
         Get.offAllNamed(AppRoutes.ARENA);
       }
     } catch (e) {
@@ -67,7 +69,27 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
+    userProfile.clear();
     await _supabase.auth.signOut();
+  }
+
+  Future<void> refreshUserProfile() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (response != null) {
+        userProfile.assignAll(response);
+      }
+    } catch (e) {
+      debugPrint('Error refreshing user profile: $e');
+    }
   }
 
   Future<void> deleteAccount() async {

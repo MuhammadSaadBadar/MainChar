@@ -30,6 +30,7 @@ class GlobalTopNav extends StatelessWidget {
           active: currentRoute == AppRoutes.LEADERBOARD,
           onTap: () => _navigate(AppRoutes.LEADERBOARD),
         ),
+
         const SizedBox(width: 32),
         _NavLink(
           label: 'My Profile',

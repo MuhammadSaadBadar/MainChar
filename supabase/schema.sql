@@ -57,3 +57,42 @@ BEGIN
   ORDER BY recognize_count DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Event Requests table
+CREATE TABLE event_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  description TEXT,
+  banner_url TEXT,
+  event_date TEXT,
+  location TEXT,
+  event_time TEXT,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE event_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view approved events" ON event_requests
+  FOR SELECT USING (status = 'approved');
+
+CREATE POLICY "Admin can view all events" ON event_requests
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid() AND campus_email = 'sp24-bse-082@cuilahore.edu.pk'
+    )
+  );
+
+CREATE POLICY "Admin can update events" ON event_requests
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid() AND campus_email = 'sp24-bse-082@cuilahore.edu.pk'
+    )
+  );
+
+CREATE POLICY "Users can create events" ON event_requests
+  FOR INSERT WITH CHECK (auth.uid() = user_id);

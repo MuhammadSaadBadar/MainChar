@@ -13,6 +13,7 @@ import '../widgets/activity_picker_sheet.dart';
 import '../constants/university_activities.dart';
 import '../routes/app_routes.dart';
 import '../controllers/auth_controller.dart';
+import '../utils/image_utils.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -34,7 +35,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Real-time Stats
   int _upvotesCount = 0;
-  int _aura = 0;
   StreamSubscription? _votesSubscription;
 
   String? _targetUserId;
@@ -84,7 +84,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (mounted) {
             setState(() {
               _upvotesCount = count;
-              _aura = count * 50;
             });
           }
         });
@@ -116,6 +115,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             [];
         _isLoading = false;
       });
+      debugPrint(
+        'Profile - Data Fetched: ${response['username']}, Memories: ${_memories.length}',
+      );
     } catch (e) {
       debugPrint('Error fetching data: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -151,17 +153,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       String? avatarUrl = _userData?['avatar_url'];
-
       if (_imageBytes != null) {
         final filePath =
             '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-
         debugPrint('Uploading to Supabase (Web Binary): $filePath');
+
+        // NEW: Compress avatar before upload
+        final compressedBytes = await ImageUtils.compressAvatar(_imageBytes!);
 
         await (Supabase.instance.client.storage.from('avatars') as dynamic)
             .uploadBinary(
               filePath,
-              _imageBytes!,
+              compressedBytes,
               fileOptions: const FileOptions(
                 contentType: 'image/jpeg',
                 upsert: true,
@@ -184,6 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           })
           .eq('id', user.id);
 
+      debugPrint('Profile - User DB updated successfully');
       await _fetchUserData();
       await Get.find<AuthController>().refreshUserProfile();
 
@@ -206,15 +210,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user == null) return;
 
     setState(() => _isLoading = true);
-
     try {
       final filePath =
           '${user.id}/memory_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
+      // NEW: Compress memory image before upload
+      final compressedBytes = await ImageUtils.compressImage(bytes);
+
       await (Supabase.instance.client.storage.from('memories') as dynamic)
           .uploadBinary(
             filePath,
-            bytes,
+            compressedBytes,
             fileOptions: const FileOptions(
               contentType: 'image/jpeg',
               upsert: true,
@@ -231,6 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'description': description,
       });
 
+      debugPrint('Profile - Memory DB entry created');
       await _fetchUserData();
     } catch (e) {
       Get.snackbar('Error', 'Failed to upload memory: $e');
@@ -244,6 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
+      debugPrint('Profile - Deleting memory ID: $id');
       await Supabase.instance.client.from('memories').delete().eq('id', id);
       await _fetchUserData();
     } catch (e) {
@@ -332,6 +340,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: MainHeader(title: 'CAMPUS VIBE')),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
+                  child: Builder(
+                    builder: (_) {
+                      final isSpecialAdmin =
+                          Supabase.instance.client.auth.currentUser?.email ==
+                          'sp24-bse-082@cuilahore.edu.pk';
+                      if (!isSpecialAdmin) return const SizedBox.shrink();
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () => Get.toNamed(AppRoutes.ADMIN),
+                          icon: const Icon(
+                            Icons.admin_panel_settings,
+                            color: AppColors.secondary,
+                          ),
+                          label: Text(
+                            "ADMIN DASHBOARD",
+                            style: AppTextStyles.label(
+                              12,
+                              color: AppColors.secondary,
+                              weight: FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.secondary.withOpacity(
+                              0.1,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            side: BorderSide(
+                              color: AppColors.secondary.withOpacity(0.3),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 24,
@@ -354,7 +412,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
-                              aura: _aura,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
@@ -373,7 +430,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
-                              aura: _aura,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
@@ -662,7 +718,6 @@ class _MobileLayout extends StatelessWidget {
   final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
-  final int aura;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
@@ -679,7 +734,6 @@ class _MobileLayout extends StatelessWidget {
     required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
-    required this.aura,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
@@ -721,7 +775,6 @@ class _MobileLayout extends StatelessWidget {
           onTagsChanged: onTagsChanged,
           isSaving: isSaving,
           upvotesCount: upvotesCount,
-          aura: aura,
           isSelfProfile: isSelfProfile,
           onLogout: onLogout,
         ),
@@ -738,7 +791,6 @@ class _DesktopLayout extends StatelessWidget {
   final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
-  final int aura;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
@@ -755,7 +807,6 @@ class _DesktopLayout extends StatelessWidget {
     required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
-    required this.aura,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
@@ -797,7 +848,6 @@ class _DesktopLayout extends StatelessWidget {
             onTagsChanged: onTagsChanged,
             isSaving: isSaving,
             upvotesCount: upvotesCount,
-            aura: aura,
             isSelfProfile: isSelfProfile,
             onLogout: onLogout,
           ),
@@ -851,7 +901,6 @@ class _ContentSection extends StatelessWidget {
   final Function(List<String>)? onTagsChanged;
   final bool isSaving;
   final int upvotesCount;
-  final int aura;
   final bool isSelfProfile;
   final VoidCallback? onLogout;
 
@@ -865,7 +914,6 @@ class _ContentSection extends StatelessWidget {
     this.onTagsChanged,
     this.isSaving = false,
     required this.upvotesCount,
-    required this.aura,
     this.isSelfProfile = true,
     this.onLogout,
   });
@@ -878,14 +926,7 @@ class _ContentSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isDesktop) ...[
-          const Row(
-            children: [
-              _Tag(label: 'Design', isOutlined: true),
-              SizedBox(width: 12),
-              _Tag(label: 'Senior', isOutlined: true),
-            ],
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           if (isEditing)
             TextField(
               controller: usernameController,
@@ -902,7 +943,7 @@ class _ContentSection extends StatelessWidget {
                 style: AppTextStyles.headline(100, weight: FontWeight.w900),
               ),
             ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 22),
         ],
         ClipRRect(
           borderRadius: BorderRadius.circular(32),
@@ -1092,15 +1133,17 @@ class _ContentSection extends StatelessWidget {
                     runSpacing: 12,
                     children: [
                       _StatBadge(
-                        label: 'UPVOTES',
+                        label: 'TOTAL VOTES',
                         value: upvotesCount.toString(),
                       ),
-                      _StatBadge(label: 'AURA', value: aura.toString()),
-                      const _StatBadge(
-                        label: 'STREAK',
-                        value: '0',
-                        isSecondary: true,
-                      ),
+                      if (isSelfProfile)
+                        _StatActionBadge(
+                          label: 'RECOGNITIONS',
+                          value: 'SEE YOUR VOTES',
+                          onTap: () {
+                            Get.toNamed(AppRoutes.VOTES_HISTORY);
+                          },
+                        ),
                     ],
                   ),
                   if (isSelfProfile && !isEditing) ...[
@@ -1110,7 +1153,7 @@ class _ContentSection extends StatelessWidget {
                       height: 1,
                       color: Colors.white.withOpacity(0.05),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
                       child: TextButton(
@@ -1212,6 +1255,75 @@ class _StatBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatActionBadge extends StatelessWidget {
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _StatActionBadge({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.secondary.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.label(
+                8,
+                color: AppColors.secondary,
+                letterSpacing: 2.0,
+                weight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: AppTextStyles.label(
+                    14,
+                    color: Colors.white,
+                    weight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: AppColors.secondary,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1535,7 +1647,7 @@ class _MemoriesSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'MEMORIES AT UOL',
+                            'SOME MEMORIES FROM UOL',
                             style: AppTextStyles.headline(
                               24,
                               weight: FontWeight.w900,

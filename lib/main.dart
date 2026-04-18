@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mainchar/screens/leaderboard_screen.dart';
-import 'package:mainchar/screens/voting_arena_screen.dart';
+import 'package:mainchar/screens/votes/voting_arena_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'routes/app_pages.dart';
 import 'controllers/auth_controller.dart';

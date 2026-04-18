@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/auth_header.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SafeArea(
             child: CustomScrollView(
               slivers: [
-                const _Header(),
+                const AuthHeader(activeLink: 'Register'),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -175,8 +176,9 @@ class _AuthBackground extends StatelessWidget {
       children: [
         Positioned.fill(
           child: Image.asset(
-            'assets/login_register_background.jpeg',
+            'assets/login_register_background.webp',
             fit: BoxFit.cover,
+            cacheWidth: 1080,
           ),
         ),
         Positioned.fill(
@@ -198,7 +200,6 @@ class _AuthBackground extends StatelessWidget {
   }
 }
 
-
 class _GrainOverlay extends StatelessWidget {
   const _GrainOverlay();
 
@@ -217,103 +218,6 @@ class _GrainOverlay extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      backgroundColor: Colors.black.withOpacity(0.6),
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Text(
-                'CAMPUS VIBE',
-                style: AppTextStyles.headline(
-                  MediaQuery.of(context).size.width > 400 ? 24 : 18,
-                  color: AppColors.secondary,
-                  italic: true,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _HeaderLink(label: 'Register', active: true, onTap: () {}),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width > 400 ? 32 : 16,
-                ),
-                _HeaderLink(
-                  label: 'Login',
-                  onTap: () => Get.toNamed(AppRoutes.LOGIN),
-                ),
-              ],
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.school_outlined,
-              color: AppColors.primary,
-              size: 28,
-            ),
-          ],
-        ),
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(color: Colors.white10, height: 0.5),
-      ),
-    );
-  }
-}
-
-class _HeaderLink extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _HeaderLink({
-    required this.label,
-    this.active = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: AppTextStyles.label(
-              12,
-              color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
-              letterSpacing: 2.0,
-              weight: FontWeight.bold,
-            ),
-          ),
-          if (active)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              height: 2,
-              width: 40,
-              color: AppColors.secondary,
-            ),
-        ],
       ),
     );
   }
@@ -445,22 +349,6 @@ class _EditorialContent extends StatelessWidget {
           style: AppTextStyles.body(18, color: AppColors.onSurfaceVariant),
         ),
         const SizedBox(height: 48),
-        const Row(
-          children: [
-            Expanded(
-              child: _StatCard(value: '10,000+', label: 'Students Active'),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: _StatCard(
-                value: '50+',
-                label: 'Verified Hubs',
-                color: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 48),
         const _SocialProofAvatars(),
       ],
     );
@@ -552,7 +440,7 @@ class _SocialProofAvatars extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        '+9k',
+                        '+',
                         style: AppTextStyles.label(
                           10,
                           color: AppColors.secondary,
@@ -625,7 +513,7 @@ class _FormCard extends StatelessWidget {
                   const SizedBox(height: 48),
                   _InputField(
                     label: 'USERNAME',
-                    hint: 'vibe_master',
+                    hint: '',
                     controller: usernameController,
                     icon: Icons.alternate_email_rounded,
                   ),

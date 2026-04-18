@@ -204,11 +204,7 @@ class _EditorialSection extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        Text(
-          'The spotlight is waiting. Provide your campus credentials to reclaim your status and get back to the center of the university universe.',
-          style: AppTextStyles.body(18, color: AppColors.onSurfaceVariant),
-        ),
+
         const SizedBox(height: 48),
         Row(
           children: [

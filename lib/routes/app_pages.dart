@@ -1,11 +1,20 @@
 import 'package:get/get.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/voting_arena_screen.dart';
+import '../screens/votes/voting_arena_screen.dart';
 import '../screens/leaderboard_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
+import '../screens/announements/announcements_screen.dart';
+import '../screens/announements/request_announcement_screen.dart';
 import '../screens/explore_screen.dart';
+import '../screens/admin/admin_screen.dart';
+import '../screens/votes/votes_history_screen.dart';
+import '../screens/demo/demo_explore_screen.dart';
+import '../screens/demo/demo_arena_screen.dart';
+import '../screens/demo/demo_leaderboard_screen.dart';
+import '../screens/demo/demo_profile_screen.dart';
+import '../screens/demo/demo_explore_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -46,6 +55,48 @@ class AppPages {
     GetPage(
       name: AppRoutes.EXPLORE,
       page: () => const ExploreScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.ANNOUNCEMENTS,
+      page: () => const AnnouncementsScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.ADMIN,
+      page: () => const AdminScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.REQUEST_EVENT,
+      page: () => const RequestEventScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.VOTES_HISTORY,
+      page: () => const VotesHistoryScreen(),
+      transition: Transition.cupertino,
+    ),
+
+    // Demo Routes
+    GetPage(
+      name: AppRoutes.DEMO_EXPLORE,
+      page: () => const DemoExploreScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.DEMO_ARENA,
+      page: () => const DemoArenaScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.DEMO_LEADERBOARD,
+      page: () => const DemoLeaderboardScreen(),
+      transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.DEMO_PROFILE,
+      page: () => const DemoProfileScreen(),
       transition: Transition.fadeIn,
     ),
   ];

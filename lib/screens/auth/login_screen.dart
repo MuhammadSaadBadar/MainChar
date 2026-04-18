@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../routes/app_routes.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/auth_header.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -78,10 +79,55 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           const _AuthBackground(),
           const _GrainOverlay(),
+          // Demo Button Top Left
+          Positioned(
+            top: 20,
+            left: 20,
+            child: GestureDetector(
+              onTap: () => Get.toNamed(AppRoutes.DEMO_EXPLORE),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.yellowAccent,
+                  borderRadius: BorderRadius.circular(100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.play_circle_fill,
+                      color: Colors.black,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'DEMO',
+                      style: AppTextStyles.label(
+                        12,
+                        color: Colors.black,
+                        weight: FontWeight.bold,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             child: CustomScrollView(
               slivers: [
-                const _StickyHeader(),
+                const AuthHeader(activeLink: 'Login'),
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -163,8 +209,9 @@ class _AuthBackground extends StatelessWidget {
       children: [
         Positioned.fill(
           child: Image.asset(
-            'assets/login_register_background.jpeg',
+            'assets/login_register_background.webp',
             fit: BoxFit.cover,
+            cacheWidth: 1080, // Memory optimization
           ),
         ),
         Positioned.fill(
@@ -185,7 +232,6 @@ class _AuthBackground extends StatelessWidget {
     );
   }
 }
-
 
 class _GrainOverlay extends StatelessWidget {
   const _GrainOverlay();
@@ -210,120 +256,76 @@ class _GrainOverlay extends StatelessWidget {
   }
 }
 
-class _StickyHeader extends StatelessWidget {
-  const _StickyHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      backgroundColor: Colors.black.withOpacity(0.8),
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      toolbarHeight: 80,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Text(
-                'WE AT UOL',
-                style: AppTextStyles.headline(
-                  MediaQuery.of(context).size.width > 400 ? 24 : 18,
-                  color: AppColors.secondary,
-                  italic: true,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _NavButton(
-                  label: 'Register',
-                  onTap: () => Get.toNamed(AppRoutes.REGISTER),
-                ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width > 400 ? 32 : 16,
-                ),
-                const _NavButton(label: 'Login', active: true),
-              ],
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.school, color: AppColors.primary, size: 24),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavButton extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback? onTap;
-
-  const _NavButton({required this.label, this.active = false, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: AppTextStyles.label(
-              12,
-              color: active ? AppColors.secondary : AppColors.onSurfaceVariant,
-              letterSpacing: 2.0,
-              weight: active ? FontWeight.bold : FontWeight.w500,
-            ),
-          ),
-          if (active) ...[
-            const SizedBox(height: 4),
-            Container(height: 2, width: 20, color: AppColors.secondary),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _EditorialContent extends StatelessWidget {
+class _EditorialContent extends StatefulWidget {
   const _EditorialContent();
+
+  @override
+  State<_EditorialContent> createState() => _EditorialContentState();
+}
+
+class _EditorialContentState extends State<_EditorialContent> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(100),
-          ),
-          child: Text(
-            'MEMBER ACCESS',
-            style: AppTextStyles.label(
-              10,
-              color: AppColors.primary,
-              weight: FontWeight.bold,
-              letterSpacing: 2.0,
+        MouseRegion(
+          onEnter: (_) => setState(() => _isHovered = true),
+          onExit: (_) => setState(() => _isHovered = false),
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.DEMO_EXPLORE),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.symmetric(
+                horizontal: _isHovered ? 32 : 24,
+                vertical: 12,
+              ),
+              decoration: BoxDecoration(
+                color: _isHovered
+                    ? AppColors.secondary.withOpacity(0.2)
+                    : AppColors.secondary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isHovered
+                      ? AppColors.secondary
+                      : AppColors.secondary.withOpacity(0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.secondary.withOpacity(
+                      _isHovered ? 0.3 : 0.05,
+                    ),
+                    blurRadius: _isHovered ? 40 : 20,
+                    spreadRadius: _isHovered ? 5 : 2,
+                  ),
+                ],
+              ),
+              child: Text(
+                'TAKE A TOUR',
+                style: AppTextStyles.headline(
+                  32,
+                  color: AppColors.secondary,
+                  italic: true,
+                  weight: FontWeight.w900,
+                ),
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 56),
+
         RichText(
           text: TextSpan(
             style: AppTextStyles.headline(64, weight: FontWeight.w900),
             children: [
-              const TextSpan(text: 'Step into \n'),
+              const TextSpan(text: 'Step in\n'),
               TextSpan(
-                text: 'Your Aura',
+                text: 'To Your People',
                 style: AppTextStyles.headline(
                   64,
                   color: AppColors.secondary,
@@ -336,28 +338,8 @@ class _EditorialContent extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         Text(
-          "Welcome back to the spotlight. Dive back into the hype and see what's trending at your campus.",
+          "Welcome back to the spotlight. Dive back into the hype.",
           style: AppTextStyles.body(18, color: AppColors.onSurfaceVariant),
-        ),
-        const SizedBox(height: 48),
-        const Row(
-          children: [
-            Expanded(
-              child: _BentoStat(
-                value: '10,000+',
-                label: 'STUDENTS ACTIVE',
-                color: AppColors.secondary,
-              ),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: _BentoStat(
-                value: '50+',
-                label: 'VERIFIED HUBS',
-                color: AppColors.primary,
-              ),
-            ),
-          ],
         ),
         const SizedBox(height: 48),
         Row(
@@ -460,7 +442,7 @@ class _AvatarStack extends StatelessWidget {
             ),
             child: Center(
               child: Text(
-                '+9k',
+                '+',
                 style: AppTextStyles.label(
                   10,
                   color: AppColors.secondary,
@@ -620,33 +602,31 @@ class _LoginCard extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    Text(
-                      "Don't have access yet?",
-                      style: AppTextStyles.label(
-                        11,
-                        color: AppColors.onSurfaceVariant,
-                        weight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
+                    _SmallLink(
+                      label: "Don't have access yet?",
+                      icon: Icons.lock_outline_rounded,
+                      color: AppColors.onSurfaceVariant,
+                      onTap: () => Get.toNamed(AppRoutes.REGISTER),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _SmallLink(
-                          label: 'Need an Invite?',
-                          icon: Icons.mail_rounded,
-                          color: AppColors.primary,
-                          onTap: () => Get.toNamed(AppRoutes.REGISTER),
-                        ),
-                        const SizedBox(width: 32),
-                        const _SmallLink(
-                          label: 'Need Help?',
-                          icon: Icons.help_outline_rounded,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
+
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.center,
+                    //   children: [
+                    //     _SmallLink(
+                    //       label: 'Need an Invite?',
+                    //       icon: Icons.mail_rounded,
+                    //       color: AppColors.primary,
+                    //       onTap: () => Get.toNamed(AppRoutes.REGISTER),
+                    //     ),
+                    //     const SizedBox(width: 32),
+                    //     const _SmallLink(
+                    //       label: 'Need Help?',
+                    //       icon: Icons.help_outline_rounded,
+                    //       color: AppColors.onSurfaceVariant,
+                    //     ),
+                    //   ],
+                    // ),
                   ],
                 ),
               ),

@@ -2,76 +2,67 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:get/get.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../theme/app_theme.dart';
-import '../widgets/global_top_nav.dart';
-import '../widgets/main_header.dart';
-import '../widgets/activity_chip.dart';
-import '../constants/university_activities.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/demo_header.dart';
+import '../../widgets/activity_chip.dart';
+import '../../constants/university_activities.dart';
+import 'demo_nav.dart';
 
-class VotingArenaScreen extends StatefulWidget {
-  const VotingArenaScreen({super.key});
+class DemoArenaScreen extends StatefulWidget {
+  const DemoArenaScreen({super.key});
 
   @override
-  State<VotingArenaScreen> createState() => _VotingArenaScreenState();
+  State<DemoArenaScreen> createState() => _DemoArenaScreenState();
 }
 
-class _VotingArenaScreenState extends State<VotingArenaScreen> {
+class _DemoArenaScreenState extends State<DemoArenaScreen> {
   final CardSwiperController _controller = CardSwiperController();
-  List<Map<String, dynamic>> _profiles = [];
-  Map<String, dynamic>? _currentUserProfile;
   bool _isLoading = true;
+
+  // Dummy candidates mirroring the VotingArenaScreen requirements
+  final List<Map<String, dynamic>> _candidates = [
+    {
+      'id': '1',
+      'username': 'DemoUser Alpha',
+      'avatar_url': 'assets/image1.webp',
+      'vibe_tags': ['Sports', 'Music'],
+    },
+    {
+      'id': '2',
+      'username': 'DemoUser Beta',
+      'avatar_url': 'assets/image2.webp',
+      'vibe_tags': ['Tech', 'Art'],
+    },
+    {
+      'id': '3',
+      'username': 'DemoUser Gamma',
+      'avatar_url': 'assets/image3.webp',
+      'vibe_tags': ['Gaming', 'Code'],
+    },
+    {
+      'id': '4',
+      'username': 'DemoUser Delta',
+      'avatar_url': 'assets/image4.webp',
+      'vibe_tags': ['Dance', 'Movies'],
+    },
+    {
+      'id': '5',
+      'username': 'DemoUser Epsilon',
+      'avatar_url': 'assets/image5.webp',
+      'vibe_tags': ['Books', 'Coffee'],
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _simulateLoading();
   }
 
-  Future<void> _loadData() async {
-    await Future.wait([_fetchCurrentUser(), _fetchProfiles()]);
-
-    final args = Get.arguments;
-    if (args != null &&
-        args is Map<String, dynamic> &&
-        args['initialProfile'] != null) {
-      final initialProfile = args['initialProfile'] as Map<String, dynamic>;
-      _profiles.removeWhere((p) => p['id'] == initialProfile['id']);
-      _profiles.insert(0, initialProfile);
-    }
-
-    setState(() => _isLoading = false);
-  }
-
-  Future<void> _fetchCurrentUser() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
-
-    try {
-      final response = await Supabase.instance.client
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .single();
-      _currentUserProfile = response;
-    } catch (e) {
-      debugPrint('Error fetching current user: $e');
-    }
-  }
-
-  Future<void> _fetchProfiles() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
-
-    try {
-      final List<dynamic> response = await Supabase.instance.client.rpc(
-        'get_random_profiles',
-        params: {'viewer_id': user.id, 'profile_limit': 10},
-      );
-
-      _profiles = List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      debugPrint('Error fetching profiles: $e');
+  Future<void> _simulateLoading() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -81,30 +72,22 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     super.dispose();
   }
 
-  Future<bool> _handleSwipe(
+  bool _onSwipe(
     int previousIndex,
     int? currentIndex,
     CardSwiperDirection direction,
-  ) async {
-    final targetProfile = _profiles[previousIndex];
-    final user = Supabase.instance.client.auth.currentUser;
-
-    if (user == null) return false;
-
-    // Right/Action = Recognized (KNOW THIS GUY)
-    final bool isRecognized = direction == CardSwiperDirection.right;
-
-    try {
-      await Supabase.instance.client.from('votes').insert({
-        'voter_id': user.id,
-        'target_id': targetProfile['id'],
-        'is_recognized': isRecognized,
-      });
-      return true;
-    } catch (e) {
-      debugPrint('Error saving vote: $e');
-      return false;
+  ) {
+    if (currentIndex == null || currentIndex >= _candidates.length - 1) {
+      Get.snackbar(
+        'Arena Empty',
+        'Register to see more people!',
+        backgroundColor: AppColors.secondary,
+        colorText: Colors.black,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(20),
+      );
     }
+    return true;
   }
 
   @override
@@ -118,7 +101,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
           const _GrainOverlay(),
           Column(
             children: [
-              const MainHeader(title: 'ARENA'),
+              const DemoHeader(title: 'ARENA'),
               Expanded(
                 child: _isLoading
                     ? const Center(
@@ -133,12 +116,10 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                           children: [
                             const _ArenaHeading(),
                             const SizedBox(height: 32),
-                            _profiles.isEmpty
+                            _candidates.isEmpty
                                 ? _buildEmptyState()
                                 : _buildCardArena(),
-                            const SizedBox(
-                              height: 84,
-                            ), // Extra space for swipe buttons
+                            const SizedBox(height: 24),
                             const _SwipeInstructions(),
                           ],
                         ),
@@ -158,13 +139,13 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
       constraints: const BoxConstraints(maxWidth: 420),
       child: CardSwiper(
         controller: _controller,
-        cardsCount: _profiles.length,
-        onSwipe: _handleSwipe,
-        numberOfCardsDisplayed: _profiles.length == 1 ? 1 : 2,
+        cardsCount: _candidates.length,
+        onSwipe: _onSwipe,
+        numberOfCardsDisplayed: _candidates.length == 1 ? 1 : 2,
         backCardOffset: const Offset(4, -10),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         cardBuilder: (context, index, horizontalThreshold, verticalThreshold) {
-          final profile = _profiles[index];
+          final profile = _candidates[index];
           return _VotingCard(profile: profile);
         },
       ),
@@ -190,7 +171,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Check back later for new candidates.',
+          'Register to find the real Main Characters.',
           style: AppTextStyles.body(14, color: AppColors.onSurfaceVariant),
         ),
       ],
@@ -209,7 +190,11 @@ class _BackgroundImage extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset('assets/voting_background.jpg', fit: BoxFit.cover),
+            Image.asset(
+              'assets/voting_background.webp',
+              fit: BoxFit.cover,
+              cacheWidth: 1080,
+            ),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
@@ -304,24 +289,24 @@ class _ArenaHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.secondary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
-          ),
-          child: Text(
-            'ACTIVE SESSION',
-            style: AppTextStyles.label(
-              10,
-              color: AppColors.secondary,
-              weight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+        // Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        //   decoration: BoxDecoration(
+        //     color: AppColors.secondary.withOpacity(0.1),
+        //     borderRadius: BorderRadius.circular(100),
+        //     border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+        //   ),
+        //   child: Text(
+        //     'ACTIVE SESSION',
+        //     style: AppTextStyles.label(
+        //       10,
+        //       color: AppColors.secondary,
+        //       weight: FontWeight.bold,
+        //       letterSpacing: 2,
+        //     ),
+        //   ),
+        // ),
+        // const SizedBox(height: 16),
         RichText(
           text: TextSpan(
             style: AppTextStyles.headline(48, weight: FontWeight.w900),
@@ -340,10 +325,7 @@ class _ArenaHeading extends StatelessWidget {
           ),
         ),
         if (MediaQuery.of(context).size.width < 768)
-          const Padding(
-            padding: EdgeInsets.only(top: 24),
-            child: GlobalTopNav(),
-          ),
+          const Padding(padding: EdgeInsets.only(top: 24), child: DemoNav()),
       ],
     );
   }
@@ -374,21 +356,10 @@ class _VotingCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (avatarUrl != null)
-            Image.network(
+            Image.asset(
               avatarUrl,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary.withOpacity(0.5),
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
-                );
-              },
+              cacheWidth: 800,
               errorBuilder: (c, e, s) => _buildPlaceholder(),
             )
           else
@@ -415,7 +386,7 @@ class _VotingCard extends StatelessWidget {
             child: Text(
               (profile['username'] ?? 'User').toString().toUpperCase(),
               style: AppTextStyles.headline(
-                MediaQuery.of(context).size.width > 600 ? 40 : 32,
+                MediaQuery.of(context).size.width > 600 ? 40 : 28,
                 weight: FontWeight.w900,
                 color: Colors.white,
                 letterSpacing: 1.5,
@@ -448,7 +419,7 @@ class _VotingCard extends StatelessWidget {
                   )
                 else
                   Text(
-                    profile['bio'] ?? 'No bio yet',
+                    'University Student',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.body(

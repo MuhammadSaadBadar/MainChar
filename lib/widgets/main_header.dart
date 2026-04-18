@@ -48,7 +48,17 @@ class MainHeader extends StatelessWidget {
                   if (!isMobile) ...[const GlobalTopNav()],
                   Row(
                     children: [
-                      const SizedBox(width: 20),
+                      GestureDetector(
+                        onTap: () {
+                          Get.toNamed(AppRoutes.ANNOUNCEMENTS);
+                        },
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
                       GestureDetector(
                         onTap: () {
                           final auth = Get.find<AuthController>();

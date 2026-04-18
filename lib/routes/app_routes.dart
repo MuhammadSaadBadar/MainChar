@@ -9,4 +9,15 @@ abstract class AppRoutes {
   static const String PROFILE = '/profile';
   static const String FORGOT_PASSWORD = '/forgot_password';
   static const String EXPLORE = '/explore';
+  static const String ANNOUNCEMENTS = '/announcements';
+  static const String ADMIN = '/admin';
+  static const String REQUEST_EVENT = '/request_event';
+  static const String STUDENT_SERVICES = '/student_services';
+  static const String VOTES_HISTORY = '/votes_history';
+
+  // Demo Routes
+  static const String DEMO_EXPLORE = '/demo_explore';
+  static const String DEMO_ARENA = '/demo_arena';
+  static const String DEMO_LEADERBOARD = '/demo_leaderboard';
+  static const String DEMO_PROFILE = '/demo_profile';
 }

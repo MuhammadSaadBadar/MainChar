@@ -204,7 +204,6 @@ class _EditorialSection extends StatelessWidget {
             ],
           ),
         ),
-
         const SizedBox(height: 48),
         Row(
           children: [

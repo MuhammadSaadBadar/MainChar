@@ -263,8 +263,55 @@ class _EditorialContent extends StatefulWidget {
   State<_EditorialContent> createState() => _EditorialContentState();
 }
 
-class _EditorialContentState extends State<_EditorialContent> {
+class _EditorialContentState extends State<_EditorialContent>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
+  late AnimationController _jumpController;
+  late Animation<Offset> _jumpAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _jumpController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _jumpAnimation = TweenSequence<Offset>([
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: Offset.zero,
+          end: const Offset(0, -0.15),
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween<Offset>(
+          begin: const Offset(0, -0.15),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.bounceOut)),
+        weight: 70,
+      ),
+    ]).animate(_jumpController);
+
+    // Initial delay then start periodic jump
+    _startPeriodicJump();
+  }
+
+  void _startPeriodicJump() async {
+    while (mounted) {
+      await Future.delayed(const Duration(seconds: 4));
+      if (mounted && !_isHovered) {
+        await _jumpController.forward(from: 0);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _jumpController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -305,13 +352,16 @@ class _EditorialContentState extends State<_EditorialContent> {
                   ),
                 ],
               ),
-              child: Text(
-                'TAKE A TOUR',
-                style: AppTextStyles.headline(
-                  32,
-                  color: AppColors.secondary,
-                  italic: true,
-                  weight: FontWeight.w900,
+              child: SlideTransition(
+                position: _jumpAnimation,
+                child: Text(
+                  'TAKE A TOUR',
+                  style: AppTextStyles.headline(
+                    32,
+                    color: AppColors.secondary,
+                    italic: true,
+                    weight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),

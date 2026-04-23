@@ -1,11 +1,11 @@
 {
-    "name": "MainChar",
-    "short_name": "MainChar",
+    "name": "Inside UoL",
+    "short_name": "Inside UoL",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0E0E0E",
+    "theme_color": "#0E0E0E",
+    "description": "The official student community platform for UoL.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

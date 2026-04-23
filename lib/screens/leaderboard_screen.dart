@@ -108,11 +108,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           CustomScrollView(
             slivers: [
               // Top Navigation Bar (Integrated directly into sliver)
-              SliverToBoxAdapter(
-                child: const MainHeader(
-                  title: 'CAMPUS VIBE',
-                ),
-              ),
+              SliverToBoxAdapter(child: const MainHeader(title: 'CAMPUS VIBE')),
 
               if (MediaQuery.of(context).size.width < 768)
                 const SliverToBoxAdapter(
@@ -617,7 +613,7 @@ class _Avatar extends StatelessWidget {
                           strokeWidth: 2,
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
                         ),
                       );

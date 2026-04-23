@@ -56,13 +56,16 @@ class ActivityChip extends StatelessWidget {
               style: TextStyle(fontSize: isCompact ? 14 : 18),
             ),
             const SizedBox(width: 8),
-            Text(
-              label.toUpperCase(),
-              style: AppTextStyles.label(
-                isCompact ? 10 : 12,
-                color: isSelected ? Colors.black : AppColors.onSurfaceVariant,
-                weight: isSelected ? FontWeight.bold : FontWeight.w600,
-                letterSpacing: 1.2,
+            Flexible(
+              child: Text(
+                label.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.label(
+                  isCompact ? 10 : 12,
+                  color: isSelected ? Colors.black : AppColors.onSurfaceVariant,
+                  weight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:mainchar/widgets/global_top_nav.dart';
 import '../theme/app_theme.dart';
 import '../routes/app_routes.dart';
 import 'dart:math';
@@ -127,6 +128,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
               Expanded(
                 child: CustomScrollView(
                   slivers: [
+                    if (MediaQuery.of(context).size.width < 768)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: GlobalTopNav()),
+                        ),
+                      ),
                     SliverPadding(
                       padding: const EdgeInsets.all(24),
                       sliver: SliverToBoxAdapter(
@@ -177,8 +185,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ],
           ),
-          // Mobile Bottom Nav
-          if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
         ],
       ),
     );
@@ -498,7 +504,6 @@ class _ProfileCard extends StatelessWidget {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    top: 32,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -512,6 +517,8 @@ class _ProfileCard extends StatelessWidget {
                                 padding: const EdgeInsets.only(left: 4.0),
                                 child: Text(
                                   profile['name']!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.headline(
                                     28,
                                     color: Colors.white,
@@ -663,62 +670,6 @@ class _FooterLink extends StatelessWidget {
         10,
         letterSpacing: 2.0,
         weight: FontWeight.bold,
-      ),
-    );
-  }
-}
-
-class _MobileBottomNav extends StatelessWidget {
-  const _MobileBottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A).withOpacity(0.8),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.secondary.withOpacity(0.15),
-                    blurRadius: 30,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavIcon(
-                    icon: Icons.electric_bolt_rounded,
-                    label: 'QUICK VOTE',
-                    onTap: () {
-                      if (Get.currentRoute != AppRoutes.ARENA) {
-                        Get.offNamed(AppRoutes.ARENA);
-                      }
-                    },
-                  ),
-                  _NavIcon(
-                    icon: Icons.search_rounded,
-                    label: 'EXPLORE',
-                    active: true,
-                    onTap: () {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

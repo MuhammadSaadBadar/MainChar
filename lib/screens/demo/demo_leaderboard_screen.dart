@@ -91,11 +91,19 @@ class _CountdownSection extends StatelessWidget {
             children: [
               TextSpan(
                 text: 'The Reveal in ',
-                style: AppTextStyles.headline(MediaQuery.of(context).size.width > 768 ? 84 : 48, weight: FontWeight.w900),
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 768 ? 84 : (MediaQuery.of(context).size.width > 400 ? 56 : 40),
+                  weight: FontWeight.w900,
+                ),
               ),
               TextSpan(
                 text: '7 Days',
-                style: AppTextStyles.headline(MediaQuery.of(context).size.width > 768 ? 84 : 48, weight: FontWeight.w900, color: AppColors.primary, italic: true),
+                style: AppTextStyles.headline(
+                  MediaQuery.of(context).size.width > 768 ? 84 : (MediaQuery.of(context).size.width > 400 ? 56 : 40),
+                  weight: FontWeight.w900,
+                  color: AppColors.primary,
+                  italic: true,
+                ),
               ),
             ],
           ),
@@ -171,11 +179,14 @@ class _PodiumItem extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              _Avatar(url: profile['avatar_url'], color: _rankColor, size: rank == 1 ? 160.0 : 120.0),
+              _Avatar(url: profile['avatar_url'], color: _rankColor, size: rank == 1 ? (MediaQuery.of(context).size.width > 400 ? 160.0 : 120.0) : (MediaQuery.of(context).size.width > 400 ? 120.0 : 90.0)),
               const SizedBox(height: 24),
               Text(
                 profile['username'].toUpperCase(),
-                style: AppTextStyles.headline(rank == 1 ? 28 : 20, weight: FontWeight.w900),
+                style: AppTextStyles.headline(
+                  rank == 1 ? (MediaQuery.of(context).size.width > 400 ? 28 : 20) : (MediaQuery.of(context).size.width > 400 ? 20 : 16),
+                  weight: FontWeight.w900,
+                ),
               ),
             ],
           ),

@@ -55,7 +55,7 @@ class AuthController extends GetxController {
 
       if (response == null) {
         // No profile found, redirect to ARENA as well, or a setup flow (user will use in-place edit)
-        Get.offAllNamed(AppRoutes.ARENA);
+        Get.offAllNamed(AppRoutes.EXPLORE);
       } else {
         // Profile found
         userProfile.assignAll(response);

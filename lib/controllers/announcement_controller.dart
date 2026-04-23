@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:get/get.dart';
+import 'package:mainchar/controllers/auth_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/announcement.dart';
 
@@ -9,6 +10,7 @@ class AnnouncementController extends GetxController {
   // Real-time streams
   final RxList<Announcement> pendingRequests = <Announcement>[].obs;
   final RxList<Announcement> approvedAnnouncements = <Announcement>[].obs;
+  final RxInt unreadCount = 0.obs;
 
   @override
   void onInit() {
@@ -57,6 +59,7 @@ class AnnouncementController extends GetxController {
 
               pendingRequests.assignAll(pending);
               approvedAnnouncements.assignAll(approved);
+              _updateUnreadCount();
             } catch (e) {
               print('[AnnouncementController] Mapping error: $e');
             }
@@ -80,6 +83,7 @@ class AnnouncementController extends GetxController {
     required String location,
     required String eventDate,
     required String eventTime,
+    required String rules,
     String? bannerUrl,
   }) async {
     final userId = _supabase.auth.currentUser?.id;
@@ -93,6 +97,7 @@ class AnnouncementController extends GetxController {
       'location': location,
       'event_date': eventDate,
       'event_time': eventTime,
+      'rules': rules,
       'banner_url': bannerUrl ?? '',
       'status': 'pending',
     });
@@ -123,5 +128,44 @@ class AnnouncementController extends GetxController {
     pendingRequests.clear();
     approvedAnnouncements.clear();
     _listenToAnnouncements();
+  }
+
+  void _updateUnreadCount() {
+    try {
+      final auth = Get.find<AuthController>();
+      final lastCheckStr = auth.userProfile['last_announcement_check'];
+      if (lastCheckStr == null) {
+        unreadCount.value = approvedAnnouncements.length;
+        return;
+      }
+
+      final lastCheck = DateTime.parse(lastCheckStr.toString());
+      unreadCount.value = approvedAnnouncements
+          .where((a) => a.createdAt.isAfter(lastCheck))
+          .length;
+      print('[AnnouncementController] Unread count: ${unreadCount.value}');
+    } catch (e) {
+      print('[AnnouncementController] Error updating unread count: $e');
+    }
+  }
+
+  Future<void> markAsRead() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    final now = DateTime.now().toIso8601String();
+    try {
+      await _supabase
+          .from('users')
+          .update({'last_announcement_check': now})
+          .eq('id', userId);
+
+      // Update local state immediately
+      Get.find<AuthController>().userProfile['last_announcement_check'] = now;
+      unreadCount.value = 0;
+      print('[AnnouncementController] Marked as read at $now');
+    } catch (e) {
+      print('[AnnouncementController] Error marking as read: $e');
+    }
   }
 }

@@ -285,7 +285,7 @@ class _SearchHeader extends StatelessWidget {
       children: [
         const SizedBox(height: 24),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
@@ -296,17 +296,23 @@ class _SearchHeader extends StatelessWidget {
                 Icons.search_rounded,
                 color: AppColors.onSurfaceVariant,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   controller: controller,
                   onChanged: onChanged,
-                  style: AppTextStyles.body(18, weight: FontWeight.w500),
+                  style: AppTextStyles.body(
+                    MediaQuery.of(context).size.width > 360 ? 18 : 16,
+                    weight: FontWeight.w500,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Search the campus elite...',
-                    hintStyle: AppTextStyles.body(18, color: AppColors.outline),
+                    hintStyle: AppTextStyles.body(
+                      MediaQuery.of(context).size.width > 360 ? 18 : 16,
+                      color: AppColors.outline,
+                    ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 24),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 20),
                   ),
                 ),
               ),
@@ -467,79 +473,93 @@ class _ProfileCard extends StatelessWidget {
                 left: 0,
                 right: 0,
                 top: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              profile['name']!,
-                              style: AppTextStyles.headline(
-                                24,
-                                color: Colors.white,
-                                weight: FontWeight.w900,
+                child: LayoutBuilder(
+                  builder: (context, boxConstraints) {
+                    final cardHeight = boxConstraints.maxHeight;
+                    final isVeryShort = cardHeight < 150;
+                    final isSmall = cardHeight < 200;
+
+                    return Padding(
+                      padding: EdgeInsets.all(isSmall ? 12.0 : 16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profile['name']!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.headline(
+                                    isVeryShort ? 18 : 24,
+                                    color: Colors.white,
+                                    weight: FontWeight.w900,
+                                  ),
+                                ),
+                                if (!isVeryShort) ...[
+                                  const SizedBox(height: 8),
+                                  if (profile['vibe_tags'] != null &&
+                                      (profile['vibe_tags'] as List).isNotEmpty)
+                                    Wrap(
+                                      spacing: 4,
+                                      runSpacing: 4,
+                                      children: (profile['vibe_tags'] as List)
+                                          .take(2)
+                                          .map((tag) {
+                                        final activity =
+                                            UniversityActivities.fromLabel(
+                                          tag.toString(),
+                                        );
+                                        return ActivityChip(
+                                          label: tag.toString(),
+                                          icon: activity?.icon ?? '✨',
+                                          isCompact: true,
+                                        );
+                                      }).toList(),
+                                    ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          if (!isVeryShort) ...[
+                            const SizedBox(width: 16),
+                            GestureDetector(
+                              onTap: () {
+                                Get.toNamed(
+                                  AppRoutes.DEMO_ARENA,
+                                  arguments: {
+                                    'initialProfile': {
+                                      'id': profile['id'],
+                                      'username': profile['name'],
+                                      'avatar_url': profile['image'],
+                                      'vibe_tags': profile['vibe_tags'],
+                                    },
+                                  },
+                                );
+                              },
+                              child: Container(
+                                width: isSmall ? 40 : 48,
+                                height: isSmall ? 40 : 48,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.secondary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.electric_bolt_rounded,
+                                  color: Colors.black,
+                                  size: isSmall ? 20 : 24,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            if (profile['vibe_tags'] != null &&
-                                (profile['vibe_tags'] as List).isNotEmpty)
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children: (profile['vibe_tags'] as List)
-                                    .take(2)
-                                    .map((tag) {
-                                  final activity =
-                                      UniversityActivities.fromLabel(
-                                    tag.toString(),
-                                  );
-                                  return ActivityChip(
-                                    label: tag.toString(),
-                                    icon: activity?.icon ?? '✨',
-                                    isCompact: true,
-                                  );
-                                }).toList(),
-                              ),
                           ],
-                        ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      GestureDetector(
-                        onTap: () {
-                          Get.toNamed(
-                            AppRoutes.DEMO_ARENA,
-                            arguments: {
-                              'initialProfile': {
-                                'id': profile['id'],
-                                'username': profile['name'],
-                                'avatar_url': profile['image'],
-                                'vibe_tags': profile['vibe_tags'],
-                              },
-                            },
-                          );
-                        },
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: const BoxDecoration(
-                            color: AppColors.secondary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.electric_bolt_rounded,
-                            color: Colors.black,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -576,13 +596,13 @@ class _Footer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 24,
+            runSpacing: 16,
+            children: const [
               _FooterLink(label: 'Support'),
-              SizedBox(width: 32),
               _FooterLink(label: 'Privacy'),
-              SizedBox(width: 32),
               _FooterLink(label: 'Terms'),
             ],
           ),

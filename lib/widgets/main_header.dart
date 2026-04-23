@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../controllers/auth_controller.dart';
 import '../routes/app_routes.dart';
 import 'global_top_nav.dart';
+import '../controllers/announcement_controller.dart';
 
 class MainHeader extends StatelessWidget {
   final String title;
@@ -52,11 +53,21 @@ class MainHeader extends StatelessWidget {
                         onTap: () {
                           Get.toNamed(AppRoutes.ANNOUNCEMENTS);
                         },
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: AppColors.primary,
-                          size: 28,
-                        ),
+                        child: Obx(() {
+                          final unreadCount =
+                              Get.find<AnnouncementController>().unreadCount.value;
+                          return Badge(
+                            label: Text(unreadCount.toString()),
+                            isLabelVisible: unreadCount > 0,
+                            backgroundColor: AppColors.secondary,
+                            textColor: Colors.black,
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
+                          );
+                        }),
                       ),
                       const SizedBox(width: 16),
                       GestureDetector(

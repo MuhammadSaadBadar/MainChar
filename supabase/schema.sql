@@ -5,6 +5,7 @@ CREATE TABLE users (
   bio TEXT,
   avatar_url TEXT,
   campus_email TEXT UNIQUE NOT NULL,
+  last_announcement_check TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -70,6 +71,7 @@ CREATE TABLE event_requests (
   location TEXT,
   event_time TEXT,
   status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+  rules TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

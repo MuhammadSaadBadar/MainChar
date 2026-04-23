@@ -10,12 +10,13 @@ import '../screens/announements/request_announcement_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/admin/admin_screen.dart';
 import '../screens/votes/votes_history_screen.dart';
-import '../screens/demo/demo_explore_screen.dart';
-import '../screens/demo/demo_arena_screen.dart';
 import '../screens/demo/demo_leaderboard_screen.dart';
 import '../screens/demo/demo_profile_screen.dart';
 import '../screens/demo/demo_explore_screen.dart';
+import '../screens/demo/demo_votes_history_screen.dart';
 import 'app_routes.dart';
+import '../screens/demo/demo_arena_screen.dart';
+import '../screens/legal/terms_screen.dart';
 
 class AppPages {
   static const INITIAL = AppRoutes.LOGIN;
@@ -77,6 +78,11 @@ class AppPages {
       page: () => const VotesHistoryScreen(),
       transition: Transition.cupertino,
     ),
+    GetPage(
+      name: AppRoutes.TERMS,
+      page: () => const TermsScreen(),
+      transition: Transition.cupertino,
+    ),
 
     // Demo Routes
     GetPage(
@@ -86,7 +92,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.DEMO_ARENA,
-      page: () => const DemoArenaScreen(),
+      page: () => DemoArenaScreen(),
       transition: Transition.fadeIn,
     ),
     GetPage(
@@ -98,6 +104,11 @@ class AppPages {
       name: AppRoutes.DEMO_PROFILE,
       page: () => const DemoProfileScreen(),
       transition: Transition.fadeIn,
+    ),
+    GetPage(
+      name: AppRoutes.DEMO_VOTES_HISTORY,
+      page: () => const DemoVotesHistoryScreen(),
+      transition: Transition.cupertino,
     ),
   ];
 }

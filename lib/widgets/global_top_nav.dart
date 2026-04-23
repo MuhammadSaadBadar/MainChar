@@ -42,9 +42,16 @@ class GlobalTopNav extends StatelessWidget {
   }
 
   void _navigate(String route) {
-    if (Get.currentRoute != route) {
-      Get.offNamed(route);
+    // If it's the same route, only reload if it's the Profile screen
+    // or if we want to force a refresh of the current view.
+    if (Get.currentRoute == route) {
+      if (route == AppRoutes.PROFILE) {
+        // For Profile, we want to allow "clicking it again" to refresh data
+        Get.offNamed(route);
+      }
+      return;
     }
+    Get.offNamed(route);
   }
 }
 

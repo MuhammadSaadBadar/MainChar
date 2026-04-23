@@ -95,11 +95,15 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
     final bool isRecognized = direction == CardSwiperDirection.right;
 
     try {
-      await Supabase.instance.client.from('votes').insert({
+      debugPrint(
+        'Arena - Voting: Voter=${user.id}, Target=${targetProfile['id']}, Recognized=$isRecognized',
+      );
+      await Supabase.instance.client.from('votes').upsert({
         'voter_id': user.id,
         'target_id': targetProfile['id'],
         'is_recognized': isRecognized,
-      });
+      }, onConflict: 'voter_id,target_id');
+      debugPrint('Arena - Vote saved successfully');
       return true;
     } catch (e) {
       debugPrint('Error saving vote: $e');
@@ -140,6 +144,44 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                               height: 84,
                             ), // Extra space for swipe buttons
                             const _SwipeInstructions(),
+                            const SizedBox(height: 32),
+                            // TEMPORARY TEST BUTTONS
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () => _controller.swipe(
+                                    CardSwiperDirection.left,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text('TEST LEFT'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.withOpacity(
+                                      0.2,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => _controller.swipe(
+                                    CardSwiperDirection.right,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text('TEST RIGHT'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.withOpacity(
+                                      0.2,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -481,12 +523,18 @@ class _SwipeInstructions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isVerySmall = screenWidth < 450;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isVerySmall ? 16 : 24,
+            vertical: 16,
+          ),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
             borderRadius: BorderRadius.circular(100),
@@ -496,61 +544,77 @@ class _SwipeInstructions extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.keyboard_arrow_left,
-                size: 18,
+              _InstructionItem(
+                label: isVerySmall ? 'DK?' : 'DK THIS PERSON?',
+                action: 'LEFT',
                 color: AppColors.primary,
+                isLeft: true,
+                hideText: isVerySmall,
               ),
-              const SizedBox(width: 12),
-              Text(
-                'DK THIS PERSON?',
-                style: AppTextStyles.label(
-                  11,
-                  color: Colors.white70,
-                  weight: FontWeight.bold,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              Text(
-                ' SWIPE LEFT',
-                style: AppTextStyles.label(
-                  11,
-                  color: AppColors.primary,
-                  weight: FontWeight.w900,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 16),
               Container(width: 1, height: 12, color: Colors.white10),
-              const SizedBox(width: 24),
-              Text(
-                'KNOW THIS GUY?',
-                style: AppTextStyles.label(
-                  11,
-                  color: Colors.white70,
-                  weight: FontWeight.bold,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              Text(
-                ' SWIPE RIGHT',
-                style: AppTextStyles.label(
-                  11,
-                  color: AppColors.secondary,
-                  weight: FontWeight.w900,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.keyboard_arrow_right,
-                size: 18,
+              const SizedBox(width: 16),
+              _InstructionItem(
+                label: isVerySmall ? 'KNOW?' : 'KNOW THIS GUY?',
+                action: 'RIGHT',
                 color: AppColors.secondary,
+                isLeft: false,
+                hideText: isVerySmall,
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _InstructionItem extends StatelessWidget {
+  final String label;
+  final String action;
+  final Color color;
+  final bool isLeft;
+  final bool hideText;
+
+  const _InstructionItem({
+    required this.label,
+    required this.action,
+    required this.color,
+    required this.isLeft,
+    required this.hideText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isLeft)
+          Icon(Icons.keyboard_arrow_left, size: 18, color: color)
+        else
+          const SizedBox.shrink(),
+        if (isLeft) const SizedBox(width: 8),
+        Text(
+          label.toUpperCase(),
+          style: AppTextStyles.label(
+            11,
+            color: Colors.white70,
+            weight: FontWeight.bold,
+            letterSpacing: 1.0,
+          ),
+        ),
+        Text(
+          ' $action',
+          style: AppTextStyles.label(
+            11,
+            color: color,
+            weight: FontWeight.w900,
+            letterSpacing: 1.0,
+          ),
+        ),
+        if (!isLeft) const SizedBox(width: 8),
+        if (!isLeft) Icon(Icons.keyboard_arrow_right, size: 18, color: color),
+      ],
     );
   }
 }

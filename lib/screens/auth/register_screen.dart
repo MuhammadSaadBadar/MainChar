@@ -19,6 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool _agreeToTerms = false;
 
   @override
   void dispose() {
@@ -60,6 +61,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 confirmPasswordController:
                                     _confirmPasswordController,
                                 isLoading: _isLoading,
+                                agreeToTerms: _agreeToTerms,
+                                onToggleTerms: (val) => setState(
+                                  () => _agreeToTerms = val ?? false,
+                                ),
                                 onRegister: _handleRegister,
                               );
                             } else {
@@ -70,6 +75,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 confirmPasswordController:
                                     _confirmPasswordController,
                                 isLoading: _isLoading,
+                                agreeToTerms: _agreeToTerms,
+                                onToggleTerms: (val) => setState(
+                                  () => _agreeToTerms = val ?? false,
+                                ),
                                 onRegister: _handleRegister,
                               );
                             }
@@ -84,7 +93,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
           // Mobile Bottom Nav
-          if (MediaQuery.of(context).size.width < 900) const _MobileBottomNav(),
         ],
       ),
     );
@@ -109,6 +117,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (!_agreeToTerms) {
+      Get.snackbar(
+        'Error',
+        'You must agree to the Terms & Privacy Code',
+        backgroundColor: Colors.redAccent.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     if (password != confirmPassword) {
       Get.snackbar(
         'Error',
@@ -119,10 +137,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk')) {
+    if (!email.toLowerCase().endsWith(
+      '@cuilahore.edu.pk' || '@student.uol.edu.pk',
+    )) {
       Get.snackbar(
         'Error',
-        'Only @cuilahore.edu.pk emails are allowed',
+        'Only @student.uol.edu.pk emails are allowed',
         backgroundColor: Colors.redAccent.withOpacity(0.8),
         colorText: Colors.white,
       );
@@ -229,6 +249,8 @@ class _MobileLayout extends StatelessWidget {
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final bool isLoading;
+  final bool agreeToTerms;
+  final Function(bool?) onToggleTerms;
   final VoidCallback onRegister;
 
   const _MobileLayout({
@@ -237,6 +259,8 @@ class _MobileLayout extends StatelessWidget {
     required this.passwordController,
     required this.confirmPasswordController,
     required this.isLoading,
+    required this.agreeToTerms,
+    required this.onToggleTerms,
     required this.onRegister,
   });
 
@@ -253,6 +277,8 @@ class _MobileLayout extends StatelessWidget {
           passwordController: passwordController,
           confirmPasswordController: confirmPasswordController,
           isLoading: isLoading,
+          agreeToTerms: agreeToTerms,
+          onToggleTerms: onToggleTerms,
           onRegister: onRegister,
         ),
       ],
@@ -266,6 +292,8 @@ class _DesktopLayout extends StatelessWidget {
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final bool isLoading;
+  final bool agreeToTerms;
+  final Function(bool?) onToggleTerms;
   final VoidCallback onRegister;
 
   const _DesktopLayout({
@@ -274,6 +302,8 @@ class _DesktopLayout extends StatelessWidget {
     required this.passwordController,
     required this.confirmPasswordController,
     required this.isLoading,
+    required this.agreeToTerms,
+    required this.onToggleTerms,
     required this.onRegister,
   });
 
@@ -292,6 +322,8 @@ class _DesktopLayout extends StatelessWidget {
             passwordController: passwordController,
             confirmPasswordController: confirmPasswordController,
             isLoading: isLoading,
+            agreeToTerms: agreeToTerms,
+            onToggleTerms: onToggleTerms,
             onRegister: onRegister,
           ),
         ),
@@ -467,6 +499,8 @@ class _FormCard extends StatelessWidget {
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final bool isLoading;
+  final bool agreeToTerms;
+  final Function(bool?) onToggleTerms;
   final VoidCallback onRegister;
 
   const _FormCard({
@@ -475,6 +509,8 @@ class _FormCard extends StatelessWidget {
     required this.passwordController,
     required this.confirmPasswordController,
     required this.isLoading,
+    required this.agreeToTerms,
+    required this.onToggleTerms,
     required this.onRegister,
   });
 
@@ -520,7 +556,7 @@ class _FormCard extends StatelessWidget {
                   const SizedBox(height: 32),
                   _InputField(
                     label: 'UNIVERSITY EMAIL',
-                    hint: 'name@cuilahore.edu.pk',
+                    hint: 'your university email...',
                     controller: emailController,
                     icon: Icons.school_rounded,
                   ),
@@ -539,6 +575,70 @@ class _FormCard extends StatelessWidget {
                     controller: confirmPasswordController,
                     icon: Icons.lock_outline_rounded,
                     isPassword: true,
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: Checkbox(
+                          value: agreeToTerms,
+                          onChanged: onToggleTerms,
+                          activeColor: AppColors.primary,
+                          checkColor: Colors.black,
+                          side: BorderSide(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => onToggleTerms(!agreeToTerms),
+                          child: RichText(
+                            text: TextSpan(
+                              style: AppTextStyles.label(12),
+                              children: [
+                                const TextSpan(text: 'I AGREE TO THE '),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: GestureDetector(
+                                    onTap: () => Get.toNamed(AppRoutes.TERMS),
+                                    child: Text(
+                                      'VIBE TERMS',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const TextSpan(text: ' & '),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: GestureDetector(
+                                    onTap: () => Get.toNamed(AppRoutes.TERMS),
+                                    child: Text(
+                                      'PRIVACY CODE',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 38),
                   SizedBox(
@@ -836,49 +936,6 @@ class _FooterLink extends StatelessWidget {
           12,
           letterSpacing: 2.0,
           weight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-class _MobileBottomNav extends StatelessWidget {
-  const _MobileBottomNav();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(40),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A).withOpacity(0.8),
-                borderRadius: BorderRadius.circular(40),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.secondary.withOpacity(0.15),
-                    blurRadius: 30,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavIcon(icon: Icons.bolt_rounded, label: 'QUICK VOTE'),
-                  _NavIcon(icon: Icons.search_rounded, label: 'SEARCH'),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

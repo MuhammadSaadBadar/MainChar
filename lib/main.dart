@@ -7,6 +7,7 @@ import 'package:mainchar/screens/votes/voting_arena_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'routes/app_pages.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/announcement_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ class MainCharApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialBinding: BindingsBuilder(() {
         Get.put(AuthController());
+        Get.put(AnnouncementController(), permanent: true);
       }),
       theme: ThemeData(
         useMaterial3: true,

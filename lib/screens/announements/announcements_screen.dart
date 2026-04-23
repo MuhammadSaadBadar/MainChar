@@ -19,6 +19,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   int _selectedIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _controller.markAsRead();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -402,6 +408,10 @@ class _DetailView extends StatelessWidget {
                           ],
                         ),
                       ],
+                      if (announcement.rules.isNotEmpty) ...[
+                        const SizedBox(height: 32),
+                        _RulesBlock(rules: announcement.rules),
+                      ],
                     ],
                   ),
                 ),
@@ -514,12 +524,64 @@ class _MobileDetailSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
                     ],
+                    if (announcement.rules.isNotEmpty) ...[
+                      _RulesBlock(rules: announcement.rules),
+                      const SizedBox(height: 32),
+                    ],
                   ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RulesBlock extends StatelessWidget {
+  final String rules;
+
+  const _RulesBlock({required this.rules});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.gavel_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "RULES & GUIDELINES",
+                style: AppTextStyles.label(
+                  12,
+                  color: AppColors.primary,
+                  weight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            rules,
+            style: AppTextStyles.body(16, color: Colors.white.withOpacity(0.9)),
+          ),
+        ],
       ),
     );
   }

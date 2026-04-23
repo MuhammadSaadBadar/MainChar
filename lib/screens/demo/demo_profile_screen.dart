@@ -510,20 +510,41 @@ class _ContentSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 48),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _StatBadge(
-                        label: 'TOTAL VOTES',
-                        value: '🔥 ${userData['hype']}',
-                      ),
-                      _StatActionBadge(
-                        label: 'CAMPUS RANK',
-                        value: '#${userData['rank']}',
-                        onTap: () => onAction('RANK'),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, statsConstraints) {
+                      final badgeWidth = (statsConstraints.maxWidth - 24) / 2;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          SizedBox(
+                            width: badgeWidth > 180 ? null : (statsConstraints.maxWidth - 12) / 2,
+                            child: _StatBadge(
+                              label: 'TOTAL VOTES',
+                              value: '🔥 ${userData['hype']}',
+                            ),
+                          ),
+                          SizedBox(
+                            width: badgeWidth > 180 ? null : (statsConstraints.maxWidth - 12) / 2,
+                            child: _StatActionBadge(
+                              label: 'CAMPUS RANK',
+                              value: '#${userData['rank']}',
+                              onTap: () => onAction('RANK'),
+                            ),
+                          ),
+                          SizedBox(
+                            width: statsConstraints.maxWidth,
+                            child: _StatActionBadge(
+                              label: 'RECOGNITIONS',
+                              value: 'SEE YOUR VOTES',
+                              onTap: () {
+                                Get.toNamed(AppRoutes.DEMO_VOTES_HISTORY);
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 48),
                   Container(
@@ -576,10 +597,16 @@ class _ContentSection extends StatelessWidget {
         ),
         if (!isDesktop) ...[
           const SizedBox(height: 24),
-          Text(
-            userData['username'].toString().toUpperCase(),
-            style: AppTextStyles.headline(40, weight: FontWeight.w900),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              userData['username'].toString().toUpperCase(),
+              style: AppTextStyles.headline(
+                MediaQuery.of(context).size.width > 360 ? 40 : 28,
+                weight: FontWeight.w900,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ],
@@ -746,8 +773,11 @@ class _MemoriesSection extends StatelessWidget {
             itemCount: memories.length,
             itemBuilder: (context, index) {
               final memory = memories[index];
+              final screenWidth = MediaQuery.of(context).size.width;
+              final cardWidth = screenWidth > 768 ? 320.0 : screenWidth * 0.8;
+              
               return Container(
-                width: 320,
+                width: cardWidth,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),

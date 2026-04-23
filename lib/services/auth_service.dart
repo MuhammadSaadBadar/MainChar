@@ -4,15 +4,18 @@ class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// Signs up a new user with email, password, and username.
-  /// Enforces @cuilahore.edu.pk email domain.
+  /// Enforces @cuilahore.edu.pk or @student.uol.edu.pk email domain.
   Future<AuthResponse> signUp({
     required String email,
     required String password,
     required String username,
   }) async {
     // 1. Validate domain
-    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk')) {
-      throw Exception('Only @cuilahore.edu.pk emails are allowed!');
+    final emailLower = email.toLowerCase();
+    if (!emailLower.endsWith('@cuilahore.edu.pk') &&
+        !emailLower.endsWith('@student.uol.edu.pk')) {
+      throw Exception(
+          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
     }
 
     // 2. Sign up with Supabase
@@ -29,14 +32,17 @@ class AuthService {
   }
 
   /// Signs in a user with email and password.
-  /// Enforces @cuilahore.edu.pk email domain.
+  /// Enforces @cuilahore.edu.pk or @student.uol.edu.pk email domain.
   Future<AuthResponse> signIn({
     required String email,
     required String password,
   }) async {
     // 1. Validate domain
-    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk')) {
-      throw Exception('Only @cuilahore.edu.pk emails are allowed!');
+    final emailLower = email.toLowerCase();
+    if (!emailLower.endsWith('@cuilahore.edu.pk') &&
+        !emailLower.endsWith('@student.uol.edu.pk')) {
+      throw Exception(
+          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
     }
 
     // 2. Sign in with Supabase
@@ -48,8 +54,11 @@ class AuthService {
 
   /// Sends a password reset email if the user exists and matches the domain.
   Future<void> sendPasswordResetEmail(String email) async {
-    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk')) {
-      throw Exception('Only @cuilahore.edu.pk emails are allowed!');
+    final emailLower = email.toLowerCase();
+    if (!emailLower.endsWith('@cuilahore.edu.pk') &&
+        !emailLower.endsWith('@student.uol.edu.pk')) {
+      throw Exception(
+          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
     }
     await _supabase.auth.resetPasswordForEmail(
       email.trim(),

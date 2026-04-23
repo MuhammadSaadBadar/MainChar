@@ -9,6 +9,7 @@ class Announcement {
   final String location;
   final String eventTime;
   final String status;
+  final String rules;
   final DateTime createdAt;
 
   Announcement({
@@ -22,6 +23,7 @@ class Announcement {
     this.location = '',
     this.eventTime = '',
     this.status = 'pending',
+    this.rules = '',
     required this.createdAt,
   });
 
@@ -37,6 +39,7 @@ class Announcement {
       location: json['location'] as String? ?? '',
       eventTime: json['event_time'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
+      rules: json['rules'] as String? ?? '',
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -52,6 +55,7 @@ class Announcement {
       'location': location,
       'event_time': eventTime,
       'status': status,
+      'rules': rules,
     };
   }
 }

@@ -20,6 +20,7 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
   final TextEditingController _startTimeController = TextEditingController();
   final TextEditingController _endTimeController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _rulesController = TextEditingController();
   String _selectedCategory = '';
 
   final List<String> _categories = [
@@ -39,7 +40,62 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
     _startTimeController.dispose();
     _endTimeController.dispose();
     _descriptionController.dispose();
+    _rulesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.black,
+              surface: AppColors.surfaceContainerHigh,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _dateController.text = "${picked.day}/${picked.month}/${picked.year}";
+      });
+    }
+  }
+
+  Future<void> _selectTime(TextEditingController controller) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.black,
+              surface: AppColors.surfaceContainerHigh,
+              onSurface: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        final hour = picked.hour.toString().padLeft(2, '0');
+        final minute = picked.minute.toString().padLeft(2, '0');
+        controller.text = "$hour:$minute";
+      });
+    }
   }
 
   @override
@@ -159,7 +215,7 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                     ),
                                     const SizedBox(height: 24),
                                     Text(
-                                      "BROADCAST",
+                                      "Give Reality",
                                       style: AppTextStyles.headline(
                                         isDesktop ? 80 : 56,
                                         weight: FontWeight.w900,
@@ -167,7 +223,7 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                       ).copyWith(height: 0.85),
                                     ),
                                     Text(
-                                      "YOUR VIBE",
+                                      "To Your Ideas",
                                       style: AppTextStyles.headline(
                                         isDesktop ? 80 : 56,
                                         weight: FontWeight.w900,
@@ -296,8 +352,10 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                           _InputField(
                                             label: "EVENT DATE",
                                             controller: _dateController,
-                                            hintText: "DD/MM/YYYY",
+                                            hintText: "SELECT DATE",
                                             icon: Icons.calendar_today,
+                                            readOnly: true,
+                                            onTap: _selectDate,
                                           ),
                                           const SizedBox(height: 32),
                                           // Time Row
@@ -308,7 +366,10 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                                   label: "START TIME",
                                                   controller:
                                                       _startTimeController,
-                                                  hintText: "HH:MM",
+                                                  hintText: "SELECT START",
+                                                  readOnly: true,
+                                                  onTap: () =>
+                                                      _selectTime(_startTimeController),
                                                 ),
                                               ),
                                               const SizedBox(width: 16),
@@ -317,10 +378,21 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                                   label: "END TIME",
                                                   controller:
                                                       _endTimeController,
-                                                  hintText: "HH:MM",
+                                                  hintText: "SELECT END",
+                                                  readOnly: true,
+                                                  onTap: () =>
+                                                      _selectTime(_endTimeController),
                                                 ),
                                               ),
                                             ],
+                                          ),
+                                          const SizedBox(height: 32),
+                                          _InputField(
+                                            label: "RULES & GUIDELINES",
+                                            controller: _rulesController,
+                                            hintText:
+                                                "ENTRY REQUIREMENTS, DRESS CODE, ETC.",
+                                            maxLines: 4,
                                           ),
                                           const SizedBox(height: 32),
                                           Text(
@@ -420,6 +492,7 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                                       _dateController.text,
                                                   eventTime:
                                                       "${_startTimeController.text} - ${_endTimeController.text}",
+                                                  rules: _rulesController.text,
                                                 );
 
                                                 print("Submission successful!");
@@ -511,6 +584,8 @@ class _InputField extends StatelessWidget {
   final String hintText;
   final IconData? icon;
   final int maxLines;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   const _InputField({
     required this.label,
@@ -518,6 +593,8 @@ class _InputField extends StatelessWidget {
     required this.hintText,
     this.icon,
     this.maxLines = 1,
+    this.readOnly = false,
+    this.onTap,
   });
 
   @override
@@ -538,6 +615,8 @@ class _InputField extends StatelessWidget {
         TextField(
           controller: controller,
           maxLines: maxLines,
+          readOnly: readOnly,
+          onTap: onTap,
           style: AppTextStyles.body(16, color: Colors.white),
           decoration: InputDecoration(
             hintText: hintText,

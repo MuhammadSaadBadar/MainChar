@@ -35,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Real-time Stats
   int _upvotesCount = 0;
+  int _globalRank = 0;
   StreamSubscription? _votesSubscription;
 
   String? _targetUserId;
@@ -54,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     _fetchUserData();
     _checkRevealStatus();
+    _fetchVoteCount(); // Fetch initial count manually
     _initRealtimeVotes();
   }
 
@@ -75,18 +77,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _initRealtimeVotes() {
     if (_targetUserId == null) return;
 
+    debugPrint('Profile - Initializing Real-time Votes for: $_targetUserId');
+
     _votesSubscription = Supabase.instance.client
         .from('votes')
         .stream(primaryKey: ['id'])
         .eq('target_id', _targetUserId!)
-        .listen((List<Map<String, dynamic>> data) {
-          final count = data.where((v) => v['is_recognized'] == true).length;
-          if (mounted) {
-            setState(() {
-              _upvotesCount = count;
-            });
-          }
+        .listen(
+          (List<Map<String, dynamic>> data) {
+            final count = data.where((v) => v['is_recognized'] == true).length;
+            debugPrint('Profile - Stream Update: $count recognized votes found');
+            if (mounted) {
+              setState(() {
+                _upvotesCount = count;
+              });
+              _fetchUserRank();
+            }
+          },
+          onError: (error) {
+            debugPrint('Profile - Stream Error: $error');
+          },
+        );
+  }
+
+  Future<void> _fetchVoteCount() async {
+    if (_targetUserId == null) return;
+
+    try {
+      // Debug: Check table columns
+      final debugRes = await Supabase.instance.client.from('votes').select().limit(1);
+      if (debugRes.isNotEmpty) {
+        debugPrint('Profile - Votes Table Columns: ${debugRes.first.keys.toList()}');
+      }
+
+      final response = await Supabase.instance.client
+          .from('votes')
+          .select('target_id')
+          .eq('target_id', _targetUserId!)
+          .eq('is_recognized', true);
+
+      final count = (response as List).length;
+      debugPrint('Profile - Initial Fetch: $count recognized votes found');
+
+      if (mounted) {
+        setState(() {
+          _upvotesCount = count;
         });
+      }
+    } catch (e) {
+      debugPrint('Error fetching vote count: $e');
+    }
+  }
+
+  Future<void> _fetchUserRank() async {
+    if (_targetUserId == null) return;
+
+    try {
+      // 1. Get current user's recognize count (already in _upvotesCount but let's be sure)
+      // 2. Count how many users have a strictly higher recognize count
+      final response = await Supabase.instance.client
+          .from('votes')
+          .select('target_id')
+          .eq('is_recognized', true);
+
+      final List<dynamic> allVotes = response as List<dynamic>;
+      final Map<String, int> counts = {};
+      for (var vote in allVotes) {
+        final tid = vote['target_id'] as String;
+        counts[tid] = (counts[tid] ?? 0) + 1;
+      }
+
+      final myCount = counts[_targetUserId] ?? 0;
+      int aboveMe = 0;
+      counts.forEach((tid, count) {
+        if (tid != _targetUserId && count > myCount) {
+          aboveMe++;
+        }
+      });
+
+      if (mounted) {
+        setState(() {
+          _globalRank = aboveMe + 1;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching rank: $e');
+    }
   }
 
   Future<void> _fetchUserData() async {
@@ -118,6 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint(
         'Profile - Data Fetched: ${response['username']}, Memories: ${_memories.length}',
       );
+      _fetchVoteCount(); // Refresh vote count as well
     } catch (e) {
       debugPrint('Error fetching data: $e');
       if (mounted) setState(() => _isLoading = false);
@@ -319,6 +396,165 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showDeleteConfirmationDialog() {
+    final passwordController = TextEditingController();
+    final RxBool isConfirming = false.obs;
+    final RxString errorMessage = ''.obs;
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: AppColors.surfaceContainerHigh,
+        title: Text(
+          'DELETE ACCOUNT',
+          style: AppTextStyles.label(
+            18,
+            weight: FontWeight.w900,
+            color: Colors.redAccent,
+          ),
+        ),
+        content: Obx(() => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This action cannot be undone. All your memories, votes, and profile data will be permanently erased.',
+              style: AppTextStyles.body(14, color: Colors.white70),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Enter your password to confirm:',
+              style: AppTextStyles.label(12, color: Colors.white54, weight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                hintText: 'Password',
+                hintStyle: const TextStyle(color: Colors.white30),
+              ),
+            ),
+            if (errorMessage.value.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                errorMessage.value,
+                style: AppTextStyles.body(14, color: Colors.redAccent),
+              ),
+            ],
+          ],
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'CANCEL',
+              style: AppTextStyles.label(
+                12,
+                color: Colors.white54,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          Obx(() => ElevatedButton(
+            onPressed: isConfirming.value ? null : () async {
+              if (passwordController.text.isEmpty) {
+                errorMessage.value = 'Please enter your password.';
+                return;
+              }
+              isConfirming.value = true;
+              errorMessage.value = '';
+              final success = await _handleDeleteAccount(passwordController.text);
+              if (!success) {
+                isConfirming.value = false;
+                errorMessage.value = 'Incorrect password or an error occurred.';
+              } else {
+                Get.back(); // Close dialog
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withOpacity(0.1),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(100),
+                side: const BorderSide(color: Colors.redAccent, width: 1),
+              ),
+              elevation: 0,
+            ),
+            child: isConfirming.value
+              ? const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(color: Colors.redAccent, strokeWidth: 2),
+                )
+              : Text(
+              'DELETE FOREVER',
+              style: AppTextStyles.label(
+                12,
+                weight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
+            ),
+          )),
+        ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      barrierColor: Colors.black87,
+    );
+  }
+
+  Future<bool> _handleDeleteAccount(String password) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || user.email == null) return false;
+
+    try {
+      // 1. Verify password
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: user.email,
+        password: password,
+      );
+
+      // 2. Delete from Storage: Avatars bucket
+      final avatarList = await Supabase.instance.client.storage.from('avatars').list(path: user.id);
+      if (avatarList.isNotEmpty) {
+        final List<String> paths = avatarList.map((file) => '${user.id}/${file.name}').toList();
+        await Supabase.instance.client.storage.from('avatars').remove(paths);
+      }
+
+      // 3. Delete from Storage: Memories bucket
+      final memoryList = await Supabase.instance.client.storage.from('memories').list(path: user.id);
+      if (memoryList.isNotEmpty) {
+        final List<String> paths = memoryList.map((file) => '${user.id}/${file.name}').toList();
+        await Supabase.instance.client.storage.from('memories').remove(paths);
+      }
+
+      // 4. Delete DB rows manually to be safe
+      await Supabase.instance.client.from('memories').delete().eq('user_id', user.id);
+      await Supabase.instance.client.from('users').delete().eq('id', user.id);
+
+      // 5. Delete Supabase Auth User via RPC
+      try {
+        await Supabase.instance.client.rpc('delete_user_account');
+      } catch (rpcError) {
+        debugPrint('RPC error (non-fatal if you just wiped data): $rpcError');
+      }
+      
+      // 6. Logout
+      Get.find<AuthController>().signOut();
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -412,6 +648,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
+                              globalRank: _globalRank,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
@@ -420,6 +657,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isSaving: _isSaving,
                               isSelfProfile: _isSelfProfile,
                               onLogout: _handleLogout,
+                              onDeleteAccount: _showDeleteConfirmationDialog,
                             );
                           } else {
                             return _MobileLayout(
@@ -430,6 +668,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               selectedTags: _selectedTags,
                               imageBytes: _imageBytes,
                               upvotesCount: _upvotesCount,
+                              globalRank: _globalRank,
                               onToggleEdit: _toggleEdit,
                               onPickImage: _pickImage,
                               onSave: _saveChanges,
@@ -438,6 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               isSaving: _isSaving,
                               isSelfProfile: _isSelfProfile,
                               onLogout: _handleLogout,
+                              onDeleteAccount: _showDeleteConfirmationDialog,
                             );
                           }
                         },
@@ -718,6 +958,7 @@ class _MobileLayout extends StatelessWidget {
   final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
+  final int globalRank;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
@@ -725,6 +966,7 @@ class _MobileLayout extends StatelessWidget {
   final bool isSaving;
   final bool isSelfProfile;
   final VoidCallback onLogout;
+  final VoidCallback onDeleteAccount;
 
   const _MobileLayout({
     this.userData,
@@ -734,6 +976,7 @@ class _MobileLayout extends StatelessWidget {
     required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
+    required this.globalRank,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
@@ -741,6 +984,7 @@ class _MobileLayout extends StatelessWidget {
     required this.isSaving,
     this.isSelfProfile = true,
     required this.onLogout,
+    required this.onDeleteAccount,
   });
 
   @override
@@ -775,8 +1019,10 @@ class _MobileLayout extends StatelessWidget {
           onTagsChanged: onTagsChanged,
           isSaving: isSaving,
           upvotesCount: upvotesCount,
+          globalRank: globalRank,
           isSelfProfile: isSelfProfile,
           onLogout: onLogout,
+          onDeleteAccount: onDeleteAccount,
         ),
       ],
     );
@@ -791,6 +1037,7 @@ class _DesktopLayout extends StatelessWidget {
   final List<String> selectedTags;
   final Uint8List? imageBytes;
   final int upvotesCount;
+  final int globalRank;
   final VoidCallback onToggleEdit;
   final VoidCallback onPickImage;
   final VoidCallback onSave;
@@ -798,6 +1045,7 @@ class _DesktopLayout extends StatelessWidget {
   final bool isSaving;
   final bool isSelfProfile;
   final VoidCallback onLogout;
+  final VoidCallback onDeleteAccount;
 
   const _DesktopLayout({
     this.userData,
@@ -807,6 +1055,7 @@ class _DesktopLayout extends StatelessWidget {
     required this.selectedTags,
     this.imageBytes,
     required this.upvotesCount,
+    required this.globalRank,
     required this.onToggleEdit,
     required this.onPickImage,
     required this.onSave,
@@ -814,6 +1063,7 @@ class _DesktopLayout extends StatelessWidget {
     required this.isSaving,
     this.isSelfProfile = true,
     required this.onLogout,
+    required this.onDeleteAccount,
   });
 
   @override
@@ -848,8 +1098,10 @@ class _DesktopLayout extends StatelessWidget {
             onTagsChanged: onTagsChanged,
             isSaving: isSaving,
             upvotesCount: upvotesCount,
+            globalRank: globalRank,
             isSelfProfile: isSelfProfile,
             onLogout: onLogout,
+            onDeleteAccount: onDeleteAccount,
           ),
         ),
       ],
@@ -901,8 +1153,10 @@ class _ContentSection extends StatelessWidget {
   final Function(List<String>)? onTagsChanged;
   final bool isSaving;
   final int upvotesCount;
+  final int globalRank;
   final bool isSelfProfile;
   final VoidCallback? onLogout;
+  final VoidCallback? onDeleteAccount;
 
   const _ContentSection({
     this.userData,
@@ -914,8 +1168,10 @@ class _ContentSection extends StatelessWidget {
     this.onTagsChanged,
     this.isSaving = false,
     required this.upvotesCount,
+    required this.globalRank,
     this.isSelfProfile = true,
     this.onLogout,
+    this.onDeleteAccount,
   });
 
   @override
@@ -1136,6 +1392,11 @@ class _ContentSection extends StatelessWidget {
                         label: 'TOTAL VOTES',
                         value: upvotesCount.toString(),
                       ),
+                      _StatBadge(
+                        label: 'GLOBAL RANK',
+                        value: '#$globalRank',
+                        isSecondary: true,
+                      ),
                       if (isSelfProfile)
                         _StatActionBadge(
                           label: 'RECOGNITIONS',
@@ -1183,6 +1444,44 @@ class _ContentSection extends StatelessWidget {
                               style: AppTextStyles.label(
                                 14,
                                 color: Colors.white.withOpacity(0.8),
+                                weight: FontWeight.bold,
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: onDeleteAccount,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: Colors.red.withOpacity(0.4),
+                              width: 1,
+                            ),
+                          ),
+                          backgroundColor: Colors.red.withOpacity(0.08),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.delete_forever_rounded,
+                              color: Colors.red.withOpacity(0.9),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'DELETE ACCOUNT',
+                              style: AppTextStyles.label(
+                                14,
+                                color: Colors.white,
                                 weight: FontWeight.bold,
                                 letterSpacing: 2.0,
                               ),

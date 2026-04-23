@@ -41,7 +41,7 @@ class MainCharApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'MainChar',
+      title: 'Inside-UoL',
       debugShowCheckedModeBanner: false,
       initialBinding: BindingsBuilder(() {
         Get.put(AuthController());

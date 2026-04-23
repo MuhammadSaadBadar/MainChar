@@ -10,6 +10,7 @@ class AnnouncementController extends GetxController {
   // Real-time streams
   final RxList<Announcement> pendingRequests = <Announcement>[].obs;
   final RxList<Announcement> approvedAnnouncements = <Announcement>[].obs;
+  final RxList<Announcement> historyAnnouncements = <Announcement>[].obs;
   final RxInt unreadCount = 0.obs;
 
   @override
@@ -49,16 +50,18 @@ class AnnouncementController extends GetxController {
               );
 
               final pending = all.where((e) => e.status == 'pending').toList();
+              final history = all.where((e) => e.status != 'pending').toList();
               final approved = all
-                  .where((e) => e.status == 'approved')
+                  .where((e) => e.status == 'approved' && e.isLive)
                   .toList();
 
               print(
-                '[AnnouncementController] Pending: ${pending.length}, Approved: ${approved.length}',
+                '[AnnouncementController] Pending: ${pending.length}, Approved (Live): ${approved.length}, History: ${history.length}',
               );
 
               pendingRequests.assignAll(pending);
               approvedAnnouncements.assignAll(approved);
+              historyAnnouncements.assignAll(history);
               _updateUnreadCount();
             } catch (e) {
               print('[AnnouncementController] Mapping error: $e');
@@ -127,6 +130,7 @@ class AnnouncementController extends GetxController {
     _subscription?.cancel();
     pendingRequests.clear();
     approvedAnnouncements.clear();
+    historyAnnouncements.clear();
     _listenToAnnouncements();
   }
 

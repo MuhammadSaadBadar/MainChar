@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/main_header.dart';
 import '../../controllers/announcement_controller.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/announcement.dart';
 
 // Private model removed in favor of models/announcement.dart
@@ -106,6 +107,21 @@ class _AdminScreenState extends State<AdminScreen> {
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: 16),
+                                    Obx(
+                                      () => _StatCard(
+                                        count: _controller
+                                            .historyAnnouncements
+                                            .length
+                                            .toString(),
+                                        label: "HISTORY",
+                                        color: Colors.grey,
+                                        isActive: _activeTab == 'history',
+                                        onTap: () => setState(
+                                          () => _activeTab = 'history',
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -181,7 +197,9 @@ class _AdminScreenState extends State<AdminScreen> {
                         Obx(() {
                           final list = _activeTab == 'pending'
                               ? _controller.pendingRequests
-                              : _controller.approvedAnnouncements;
+                              : _activeTab == 'history'
+                                  ? _controller.historyAnnouncements
+                                  : _controller.approvedAnnouncements;
 
                           if (list.isEmpty) {
                             return Center(
@@ -210,6 +228,9 @@ class _AdminScreenState extends State<AdminScreen> {
                                 const SizedBox(height: 24),
                             itemBuilder: (context, index) {
                               final item = list[index];
+                              if (_activeTab == 'history') {
+                                return _HistoryTile(request: item);
+                              }
                               return _RequestTile(
                                 request: item,
                                 showActions: _activeTab == 'pending',
@@ -608,6 +629,145 @@ class _RequestTile extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _HistoryTile extends StatelessWidget {
+  final Announcement request;
+
+  const _HistoryTile({required this.request});
+
+  Future<Map<String, dynamic>?> _fetchUserDetails() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('users')
+          .select('username, email')
+          .eq('id', request.userId)
+          .single();
+      return response;
+    } catch (e) {
+      print('Error fetching user details: $e');
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: request.status == 'approved'
+              ? AppColors.primary.withOpacity(0.5)
+              : request.status == 'rejected' || request.status == 'removed'
+                  ? AppColors.error.withOpacity(0.5)
+                  : AppColors.outline.withOpacity(0.2),
+        ),
+      ),
+      child: FutureBuilder<Map<String, dynamic>?>(
+        future: _fetchUserDetails(),
+        builder: (context, snapshot) {
+          final username = snapshot.data?['username'] ?? 'Unknown User';
+          final email = snapshot.data?['email'] ?? 'Unknown Email';
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: request.status == 'approved'
+                          ? AppColors.primary.withOpacity(0.2)
+                          : AppColors.error.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      request.status.toUpperCase(),
+                      style: AppTextStyles.label(
+                        10,
+                        color: request.status == 'approved' ? AppColors.primary : AppColors.error,
+                        letterSpacing: 1.5,
+                        weight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    "CREATED: ${request.createdAt.toString().split('.').first}",
+                    style: AppTextStyles.label(10, color: AppColors.onSurfaceVariant),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                request.title,
+                style: AppTextStyles.headline(20, weight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Requested by: $username ($email)",
+                style: AppTextStyles.label(12, color: AppColors.secondary),
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.surfaceContainerHigh),
+              const SizedBox(height: 16),
+              _buildDetailRow("CATEGORY", request.category),
+              const SizedBox(height: 8),
+              _buildDetailRow("LOCATION", request.location.isEmpty ? 'N/A' : request.location),
+              const SizedBox(height: 8),
+              _buildDetailRow("DATE", request.eventDate.isEmpty ? 'N/A' : request.eventDate),
+              const SizedBox(height: 8),
+              _buildDetailRow("TIME", request.eventTime.isEmpty ? 'N/A' : request.eventTime),
+              const SizedBox(height: 16),
+              Text(
+                "DESCRIPTION",
+                style: AppTextStyles.label(10, color: AppColors.onSurfaceVariant, letterSpacing: 1.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                request.description.isEmpty ? 'No description provided.' : request.description,
+                style: AppTextStyles.body(14),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "RULES / REQUIREMENTS",
+                style: AppTextStyles.label(10, color: AppColors.onSurfaceVariant, letterSpacing: 1.5),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                request.rules.isEmpty ? 'None specified.' : request.rules,
+                style: AppTextStyles.body(14),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: AppTextStyles.label(10, color: AppColors.onSurfaceVariant, letterSpacing: 1.5),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: AppTextStyles.body(14, color: AppColors.onSurface),
+          ),
+        ),
+      ],
     );
   }
 }

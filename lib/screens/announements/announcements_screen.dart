@@ -6,6 +6,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/main_header.dart';
 import '../../controllers/announcement_controller.dart';
 import '../../models/announcement.dart';
+import '../../widgets/global_top_nav.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -28,20 +29,43 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Get.toNamed(AppRoutes.REQUEST_EVENT),
-        backgroundColor: AppColors.secondary,
-        foregroundColor: Colors.black,
-        icon: const Icon(Icons.add),
-        label: Text(
-          "NEW REQUEST",
-          style: AppTextStyles.label(
-            12,
-            weight: FontWeight.w900,
-            color: Colors.black,
-            letterSpacing: 1,
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'myRequestsBtn',
+            onPressed: () => Get.toNamed(AppRoutes.MY_REQUESTS),
+            backgroundColor: AppColors.surfaceContainerHigh,
+            foregroundColor: AppColors.onSurface,
+            icon: const Icon(Icons.list_alt, size: 20),
+            label: Text(
+              "MY REQUESTS",
+              style: AppTextStyles.label(
+                12,
+                weight: FontWeight.w900,
+                color: AppColors.onSurface,
+                letterSpacing: 1,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(width: 16),
+          FloatingActionButton.extended(
+            heroTag: 'newRequestBtn',
+            onPressed: () => Get.toNamed(AppRoutes.REQUEST_EVENT),
+            backgroundColor: AppColors.secondary,
+            foregroundColor: Colors.black,
+            icon: const Icon(Icons.add, size: 20),
+            label: Text(
+              "NEW REQUEST",
+              style: AppTextStyles.label(
+                12,
+                weight: FontWeight.w900,
+                color: Colors.black,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -49,6 +73,15 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           Column(
             children: [
               const MainHeader(title: "CAMPUS MUSE"),
+              if (MediaQuery.of(context).size.width < 768)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: const GlobalTopNav(),
+                  ),
+                ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -63,7 +96,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                         children: [
                           // Left Panel - Timeline
                           SizedBox(
-                            width: isDesktop ? 400.0 : constraints.maxWidth,
+                            width: isDesktop ? 320.0 : constraints.maxWidth,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -100,11 +133,93 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                     if (_controller
                                         .approvedAnnouncements
                                         .isEmpty) {
-                                      return const Center(
-                                        child: Text(
-                                          "THE WIRE IS QUIET...",
-                                          style: TextStyle(
-                                            color: Colors.white24,
+                                      return Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 24,
+                                          ),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  24,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors
+                                                      .surfaceContainerHigh
+                                                      .withOpacity(0.5),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: AppColors.primary
+                                                        .withOpacity(0.1),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Icon(
+                                                  Icons.blur_on_rounded,
+                                                  size: 48,
+                                                  color: AppColors.primary
+                                                      .withOpacity(0.4),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 24),
+                                              Text(
+                                                "THE WIRE IS QUIET",
+                                                style: AppTextStyles.headline(
+                                                  18,
+                                                  weight: FontWeight.w900,
+                                                  letterSpacing: 2,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                "No live broadcasts at the moment.\nBe the one to break the silence.",
+                                                textAlign: TextAlign.center,
+                                                style: AppTextStyles.body(
+                                                  12,
+                                                  color: AppColors
+                                                      .onSurfaceVariant
+                                                      .withOpacity(0.7),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 32),
+                                              TextButton.icon(
+                                                onPressed: () => Get.toNamed(
+                                                  AppRoutes.REQUEST_EVENT,
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.add,
+                                                  size: 16,
+                                                ),
+                                                label: Text(
+                                                  "CREATE ANNOUNCEMENT",
+                                                  style: AppTextStyles.label(
+                                                    10,
+                                                    weight: FontWeight.w900,
+                                                    letterSpacing: 1.5,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                                style: TextButton.styleFrom(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 20,
+                                                        vertical: 12,
+                                                      ),
+                                                  backgroundColor: AppColors
+                                                      .primary
+                                                      .withOpacity(0.1),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       );

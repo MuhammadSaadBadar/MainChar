@@ -132,7 +132,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       const SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: GlobalTopNav()),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.symmetric(horizontal: 24),
+                            child: GlobalTopNav(),
+                          ),
                         ),
                       ),
                     SliverPadding(

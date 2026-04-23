@@ -58,4 +58,29 @@ class Announcement {
       'rules': rules,
     };
   }
+
+  bool get isLive {
+    if (eventDate.isEmpty || eventTime.isEmpty) return true;
+    try {
+      final parts = eventDate.split('/');
+      if (parts.length != 3) return true;
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+
+      String timeToParse = eventTime;
+      if (eventTime.contains('-')) {
+        timeToParse = eventTime.split('-').last.trim();
+      }
+      final timeParts = timeToParse.split(':');
+      if (timeParts.length != 2) return true;
+      final hour = int.parse(timeParts[0].trim());
+      final minute = int.parse(timeParts[1].trim());
+
+      final eventDateTime = DateTime(year, month, day, hour, minute);
+      return DateTime.now().isBefore(eventDateTime);
+    } catch (e) {
+      return true; // fallback to showing it if parsing fails
+    }
+  }
 }

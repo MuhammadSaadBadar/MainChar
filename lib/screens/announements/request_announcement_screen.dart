@@ -240,30 +240,6 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 48),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons.rocket_launch,
-                                            iconColor: AppColors.secondary,
-                                            title: "Instant Hype",
-                                            subtitle:
-                                                "Reach 5,000+ active students in seconds.",
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons.verified,
-                                            iconColor: AppColors.primary,
-                                            title: "VIP Badge",
-                                            subtitle:
-                                                "Verified curators get priority feed placement.",
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (!isDesktop) const SizedBox(height: 48),
                                   ],
                                 ),
                               ),
@@ -368,8 +344,9 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                                       _startTimeController,
                                                   hintText: "SELECT START",
                                                   readOnly: true,
-                                                  onTap: () =>
-                                                      _selectTime(_startTimeController),
+                                                  onTap: () => _selectTime(
+                                                    _startTimeController,
+                                                  ),
                                                 ),
                                               ),
                                               const SizedBox(width: 16),
@@ -380,8 +357,9 @@ class _RequestEventScreenState extends State<RequestEventScreen> {
                                                       _endTimeController,
                                                   hintText: "SELECT END",
                                                   readOnly: true,
-                                                  onTap: () =>
-                                                      _selectTime(_endTimeController),
+                                                  onTap: () => _selectTime(
+                                                    _endTimeController,
+                                                  ),
                                                 ),
                                               ),
                                             ],

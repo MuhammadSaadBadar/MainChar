@@ -12,6 +12,7 @@ abstract class AppRoutes {
   static const String ANNOUNCEMENTS = '/announcements';
   static const String ADMIN = '/admin';
   static const String REQUEST_EVENT = '/request_event';
+  static const String MY_REQUESTS = '/my_requests';
   static const String STUDENT_SERVICES = '/student_services';
   static const String VOTES_HISTORY = '/votes_history';
   static const String TERMS = '/terms';

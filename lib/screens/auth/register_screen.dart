@@ -137,9 +137,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (!email.toLowerCase().endsWith(
-      '@cuilahore.edu.pk' || '@student.uol.edu.pk',
-    )) {
+    if (!email.toLowerCase().endsWith('@cuilahore.edu.pk') ||
+        !email.toLowerCase().endsWith('@student.uol.edu.pk')) {
       Get.snackbar(
         'Error',
         'Only @student.uol.edu.pk emails are allowed',

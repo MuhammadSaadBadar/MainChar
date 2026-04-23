@@ -14,17 +14,14 @@ class AuthService {
     final emailLower = email.toLowerCase();
     if (!emailLower.endsWith('@cuilahore.edu.pk') &&
         !emailLower.endsWith('@student.uol.edu.pk')) {
-      throw Exception(
-          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
+      throw Exception('Only  @student.uol.edu.pk emails are allowed!');
     }
 
     // 2. Sign up with Supabase
     final response = await _supabase.auth.signUp(
       email: email.trim(),
       password: password,
-      data: {
-        'username': username,
-      },
+      data: {'username': username},
       emailRedirectTo: 'mainchar://login-callback',
     );
 
@@ -41,8 +38,7 @@ class AuthService {
     final emailLower = email.toLowerCase();
     if (!emailLower.endsWith('@cuilahore.edu.pk') &&
         !emailLower.endsWith('@student.uol.edu.pk')) {
-      throw Exception(
-          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
+      throw Exception('Only @student.uol.edu.pk emails are allowed!');
     }
 
     // 2. Sign in with Supabase
@@ -57,8 +53,7 @@ class AuthService {
     final emailLower = email.toLowerCase();
     if (!emailLower.endsWith('@cuilahore.edu.pk') &&
         !emailLower.endsWith('@student.uol.edu.pk')) {
-      throw Exception(
-          'Only @cuilahore.edu.pk or @student.uol.edu.pk emails are allowed!');
+      throw Exception('Only  @student.uol.edu.pk emails are allowed!');
     }
     await _supabase.auth.resetPasswordForEmail(
       email.trim(),

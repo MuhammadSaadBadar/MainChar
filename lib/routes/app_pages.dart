@@ -7,6 +7,7 @@ import '../screens/profile_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/announements/announcements_screen.dart';
 import '../screens/announements/request_announcement_screen.dart';
+import '../screens/announements/my_requests_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/admin/admin_screen.dart';
 import '../screens/votes/votes_history_screen.dart';
@@ -81,6 +82,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.TERMS,
       page: () => const TermsScreen(),
+      transition: Transition.cupertino,
+    ),
+    GetPage(
+      name: AppRoutes.MY_REQUESTS,
+      page: () => const MyRequestsScreen(),
       transition: Transition.cupertino,
     ),
 

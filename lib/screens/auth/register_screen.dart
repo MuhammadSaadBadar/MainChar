@@ -138,13 +138,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final emailLower = email.toLowerCase();
-    if (!emailLower.endsWith('@cuilahore.edu.pk') &&
-        !emailLower.endsWith('@student.uol.edu.pk')) {
+    final bool isCUI = emailLower.endsWith('@cuilahore.edu.pk');
+    final bool isUOL = emailLower.endsWith('@student.uol.edu.pk');
+
+    if (!isCUI && !isUOL) {
       Get.snackbar(
-        'Error',
+        'Invalid Email',
         'Only @cuilahore.edu.pk and @student.uol.edu.pk emails are allowed',
         backgroundColor: Colors.redAccent.withOpacity(0.8),
         colorText: Colors.white,
+        duration: const Duration(seconds: 4),
       );
       return;
     }
@@ -175,11 +178,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
+      final message = e.toString().replaceFirst('Exception: ', '');
       Get.snackbar(
         'Registration Failed',
-        e.toString(),
+        message,
         backgroundColor: Colors.redAccent.withOpacity(0.8),
         colorText: Colors.white,
+        duration: const Duration(seconds: 4),
       );
     } finally {
       setState(() => _isLoading = false);

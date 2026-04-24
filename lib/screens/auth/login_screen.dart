@@ -53,11 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
         colorText: Colors.white,
       );
     } catch (e) {
+      final message = e.toString().replaceFirst('Exception: ', '');
       Get.snackbar(
         'Error',
-        e.toString(),
+        message,
         backgroundColor: AppColors.error.withOpacity(0.8),
         colorText: Colors.white,
+        duration: const Duration(seconds: 4),
       );
     } finally {
       setState(() => _isLoading = false);

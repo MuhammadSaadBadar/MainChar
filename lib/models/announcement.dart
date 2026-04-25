@@ -78,7 +78,8 @@ class Announcement {
       final minute = int.parse(timeParts[1].trim());
 
       final eventDateTime = DateTime(year, month, day, hour, minute);
-      return DateTime.now().isBefore(eventDateTime);
+      // Keep announcement live until 24 hours after the event ends/starts
+      return DateTime.now().isBefore(eventDateTime.add(const Duration(hours: 24)));
     } catch (e) {
       return true; // fallback to showing it if parsing fails
     }

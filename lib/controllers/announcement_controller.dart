@@ -29,25 +29,18 @@ class AnnouncementController extends GetxController {
         .order('created_at', ascending: false)
         .listen(
           (data) {
-            print(
-              '[AnnouncementController] Received ${data.length} items from stream',
-            );
+            print('[AnnouncementController] Stream update: ${data.length} raw items');
             try {
-              final List<Announcement> all = data.map((json) {
+              final List<Announcement> all = [];
+              for (var json in data) {
                 try {
-                  return Announcement.fromJson(json);
+                  all.add(Announcement.fromJson(json));
                 } catch (e) {
-                  print(
-                    '[AnnouncementController] Error parsing announcement: $e',
-                  );
-                  print('[AnnouncementController] JSON data: $json');
-                  rethrow;
+                  print('[AnnouncementController] Skipping malformed announcement (ID: ${json['id']}): $e');
                 }
-              }).toList();
+              }
 
-              print(
-                '[AnnouncementController] Parsed ${all.length} announcements successfully',
-              );
+              print('[AnnouncementController] Parsed ${all.length} announcements');
 
               final pending = all.where((e) => e.status == 'pending').toList();
               final history = all.where((e) => e.status != 'pending').toList();
@@ -55,16 +48,14 @@ class AnnouncementController extends GetxController {
                   .where((e) => e.status == 'approved' && e.isLive)
                   .toList();
 
-              print(
-                '[AnnouncementController] Pending: ${pending.length}, Approved (Live): ${approved.length}, History: ${history.length}',
-              );
+              print('[AnnouncementController] Filtered -> Pending: ${pending.length}, Approved: ${approved.length}, History: ${history.length}');
 
               pendingRequests.assignAll(pending);
               approvedAnnouncements.assignAll(approved);
               historyAnnouncements.assignAll(history);
               _updateUnreadCount();
             } catch (e) {
-              print('[AnnouncementController] Mapping error: $e');
+              print('[AnnouncementController] Critical error in stream processing: $e');
             }
           },
           onError: (error) {

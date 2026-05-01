@@ -15,9 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://bjzwaikdkyvgzamswtqe.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqendhaWtka3l2Z3phbXN3dHFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzgzOTgsImV4cCI6MjA5MDU1NDM5OH0.QZtEzk1wEqp4P_mgB2O22Ibfnk5B-oUnN1a8eenbASU',
+    url: const String.fromEnvironment('SUPABASE_URL'),
+    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
   );
 
   // Ensure Google Fonts can be fetched at runtime

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://insideuol.vercel.app/sitemap.xml

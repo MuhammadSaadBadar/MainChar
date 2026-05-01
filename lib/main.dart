@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mainchar/screens/leaderboard_screen.dart';
@@ -10,6 +11,7 @@ import 'controllers/auth_controller.dart';
 import 'controllers/announcement_controller.dart';
 
 void main() async {
+  usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(

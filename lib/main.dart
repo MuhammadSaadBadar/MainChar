@@ -14,10 +14,18 @@ void main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+  // These will use Vercel variables if present, or fallback to your keys for local testing
+  const supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://bjzwaikdkyvgzamswtqe.supabase.co',
   );
+  const supabaseKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqendhaWtka3l2Z3phbXN3dHFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzgzOTgsImV4cCI6MjA5MDU1NDM5OH0.QZtEzk1wEqp4P_mgB2O22Ibfnk5B-oUnN1a8eenbASU',
+  );
+
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
 
   // Ensure Google Fonts can be fetched at runtime
   GoogleFonts.config.allowRuntimeFetching = true;

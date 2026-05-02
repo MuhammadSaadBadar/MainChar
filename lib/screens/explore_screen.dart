@@ -356,7 +356,7 @@ class _MasonryFeed extends StatelessWidget {
       crossAxisSpacing: 32,
       itemCount: profiles.length,
       itemBuilder: (context, index) {
-        return _ProfileCard(profile: profiles[index]);
+        return _ProfileCard(profile: profiles[index], index: index);
       },
     );
   }
@@ -417,7 +417,8 @@ class _RefreshButton extends StatelessWidget {
 
 class _ProfileCard extends StatelessWidget {
   final Map<String, dynamic> profile;
-  const _ProfileCard({required this.profile});
+  final int index;
+  const _ProfileCard({required this.profile, required this.index});
 
   @override
   Widget build(BuildContext context) {
@@ -582,19 +583,43 @@ class _ProfileCard extends StatelessWidget {
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
-                            child: Container(
-                              width: 56,
-                              height: 56,
-                              decoration: const BoxDecoration(
-                                color: AppColors.secondary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.electric_bolt_rounded,
-                                color: Colors.black,
-                                size: 28,
-                              ),
-                            ),
+                            child:
+                                Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.secondary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.electric_bolt_rounded,
+                                        color: Colors.black,
+                                        size: 28,
+                                      ),
+                                    )
+                                    .animate(
+                                      onPlay: (controller) =>
+                                          controller.repeat(),
+                                    )
+                                    .shimmer(
+                                      duration: 120000.ms,
+                                      color: Colors.white.withOpacity(0.4),
+                                    )
+                                    .boxShadow(
+                                      begin: const BoxShadow(
+                                        color: Colors.transparent,
+                                        blurRadius: 0,
+                                      ),
+                                      end: BoxShadow(
+                                        color: AppColors.secondary.withOpacity(
+                                          0.4,
+                                        ),
+                                        blurRadius: 15,
+                                        spreadRadius: 2,
+                                      ),
+                                      duration: 800.ms,
+                                      curve: Curves.easeInOut,
+                                    ),
                           ),
                         ),
                       ],
@@ -606,8 +631,8 @@ class _ProfileCard extends StatelessWidget {
           ),
         )
         .animate()
-        .fadeIn(duration: 500.ms, delay: 200.ms)
-        .slideY(begin: 0.1, end: 0);
+        .fadeIn(duration: 400.ms, delay: (index * 80).ms)
+        .slideY(begin: 0.15, end: 0, curve: Curves.easeOutQuad);
   }
 }
 

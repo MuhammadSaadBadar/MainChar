@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
@@ -141,47 +142,10 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
                                 ? _buildEmptyState()
                                 : _buildCardArena(),
                             const SizedBox(
-                              height: 84,
+                              height: 24,
                             ), // Extra space for swipe buttons
                             const _SwipeInstructions(),
                             const SizedBox(height: 32),
-                            // TEMPORARY TEST BUTTONS
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () => _controller.swipe(
-                                    CardSwiperDirection.left,
-                                  ),
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text('TEST LEFT'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red.withOpacity(
-                                      0.2,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => _controller.swipe(
-                                    CardSwiperDirection.right,
-                                  ),
-                                  icon: const Icon(
-                                    Icons.check,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text('TEST RIGHT'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green.withOpacity(
-                                      0.2,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       ),
@@ -214,29 +178,7 @@ class _VotingArenaScreenState extends State<VotingArenaScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Column(
-      children: [
-        const Icon(
-          Icons.sentiment_satisfied_rounded,
-          size: 80,
-          color: Colors.white24,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'ARENA CLEARED',
-          style: AppTextStyles.headline(
-            24,
-            color: Colors.white24,
-            italic: true,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Check back later for new candidates.',
-          style: AppTextStyles.body(14, color: AppColors.onSurfaceVariant),
-        ),
-      ],
-    );
+    return const _EmptyArenaState();
   }
 }
 
@@ -617,4 +559,266 @@ class _InstructionItem extends StatelessWidget {
       ],
     );
   }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// 3D Infinite Cube Empty State
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmptyArenaState extends StatefulWidget {
+  const _EmptyArenaState();
+
+  @override
+  State<_EmptyArenaState> createState() => _EmptyArenaStateState();
+}
+
+class _EmptyArenaStateState extends State<_EmptyArenaState>
+    with TickerProviderStateMixin {
+  late final AnimationController _rotationCtrl;
+  late final AnimationController _pulseCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationCtrl = AnimationController(
+      duration: const Duration(seconds: 10),
+      vsync: this,
+    )..repeat();
+
+    _pulseCtrl = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _rotationCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 220,
+          width: 220,
+          child: AnimatedBuilder(
+            animation: Listenable.merge([_rotationCtrl, _pulseCtrl]),
+            builder: (context, _) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // ── Ambient Core Glow ────────────────────────────────────
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.secondary.withOpacity(
+                            0.2 + (_pulseCtrl.value * 0.3),
+                          ),
+                          blurRadius: 40 + (_pulseCtrl.value * 20),
+                          spreadRadius: 10 + (_pulseCtrl.value * 10),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── 3D Wireframe Cube ────────────────────────────────────
+                  CustomPaint(
+                    size: const Size(200, 200),
+                    painter: _CubePainter(
+                      rotationX: _rotationCtrl.value * 2 * math.pi,
+                      rotationY: _rotationCtrl.value * 4 * math.pi,
+                      rotationZ: _rotationCtrl.value * 1 * math.pi,
+                      color: AppColors.onSurface.withOpacity(0.85),
+                    ),
+                  ),
+
+                  // ── Inner Pulsing Heart ──────────────────────────────────
+                  Transform.scale(
+                    scale: 0.8 + (_pulseCtrl.value * 0.2),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white,
+                            AppColors.secondary,
+                            AppColors.secondary.withOpacity(0),
+                          ],
+                          stops: const [0.1, 0.6, 1.0],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.secondary.withOpacity(0.6),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Outer Rotating Orbit ─────────────────────────────────
+                  Transform.rotate(
+                    angle: -_rotationCtrl.value * 2 * math.pi,
+                    child: Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'ARENA CLEARED',
+          style: AppTextStyles.headline(
+            24,
+            weight: FontWeight.w900,
+            letterSpacing: 4,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'All candidates have been processed.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body(
+            13,
+            color: AppColors.onSurfaceVariant.withOpacity(0.6),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class Point3D {
+  double x, y, z;
+
+  Point3D(this.x, this.y, this.z);
+}
+
+class _CubePainter extends CustomPainter {
+  final double rotationX;
+  final double rotationY;
+  final double rotationZ;
+  final Color color;
+
+  _CubePainter({
+    required this.rotationX,
+    required this.rotationY,
+    required this.rotationZ,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth =
+          3.0 // Made bolder
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(
+        BlurStyle.solid,
+        1,
+      ); // Subtle glow flare
+
+    final center = Offset(size.width / 2, size.height / 2);
+    const double cubeSize = 60.0;
+
+    // 8 vertices of a cube
+    List<Point3D> vertices = [
+      Point3D(-1, -1, -1),
+      Point3D(1, -1, -1),
+      Point3D(1, 1, -1),
+      Point3D(-1, 1, -1),
+      Point3D(-1, -1, 1),
+      Point3D(1, -1, 1),
+      Point3D(1, 1, 1),
+      Point3D(-1, 1, 1),
+    ];
+
+    List<Offset> projected = [];
+
+    for (var v in vertices) {
+      double x = v.x * cubeSize;
+      double y = v.y * cubeSize;
+      double z = v.z * cubeSize;
+
+      // Rotate around X
+      double tempY = y * math.cos(rotationX) - z * math.sin(rotationX);
+      double tempZ = y * math.sin(rotationX) + z * math.cos(rotationX);
+      y = tempY;
+      z = tempZ;
+
+      // Rotate around Y
+      double tempX = x * math.cos(rotationY) + z * math.sin(rotationY);
+      tempZ = -x * math.sin(rotationY) + z * math.cos(rotationY);
+      x = tempX;
+      z = tempZ;
+
+      // Rotate around Z
+      tempX = x * math.cos(rotationZ) - y * math.sin(rotationZ);
+      tempY = x * math.sin(rotationZ) + y * math.cos(rotationZ);
+      x = tempX;
+      y = tempY;
+
+      // Perspective projection
+      double focalLength = 300.0;
+      double scale = focalLength / (focalLength + z);
+      projected.add(Offset(x * scale + center.dx, y * scale + center.dy));
+    }
+
+    // Draw edges
+    void drawEdge(int i, int j) =>
+        canvas.drawLine(projected[i], projected[j], paint);
+
+    // Front face
+    drawEdge(0, 1);
+    drawEdge(1, 2);
+    drawEdge(2, 3);
+    drawEdge(3, 0);
+    // Back face
+    drawEdge(4, 5);
+    drawEdge(5, 6);
+    drawEdge(6, 7);
+    drawEdge(7, 4);
+    // Connecting edges
+    drawEdge(0, 4);
+    drawEdge(1, 5);
+    drawEdge(2, 6);
+    drawEdge(3, 7);
+
+    // Add glow to vertices
+    final vertexPaint = Paint()..color = color.withOpacity(0.5);
+    for (var p in projected) {
+      canvas.drawCircle(p, 2, vertexPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CubePainter oldDelegate) =>
+      oldDelegate.rotationX != rotationX ||
+      oldDelegate.rotationY != rotationY ||
+      oldDelegate.rotationZ != rotationZ;
 }

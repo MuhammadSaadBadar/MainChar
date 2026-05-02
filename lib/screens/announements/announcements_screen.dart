@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -133,96 +134,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                     if (_controller
                                         .approvedAnnouncements
                                         .isEmpty) {
-                                      return Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 24,
-                                          ),
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.all(
-                                                  24,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors
-                                                      .surfaceContainerHigh
-                                                      .withOpacity(0.5),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: AppColors.primary
-                                                        .withOpacity(0.1),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: Icon(
-                                                  Icons.blur_on_rounded,
-                                                  size: 48,
-                                                  color: AppColors.primary
-                                                      .withOpacity(0.4),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 24),
-                                              Text(
-                                                "THE WIRE IS QUIET",
-                                                style: AppTextStyles.headline(
-                                                  18,
-                                                  weight: FontWeight.w900,
-                                                  letterSpacing: 2,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 12),
-                                              Text(
-                                                "No live broadcasts at the moment.\nBe the one to break the silence.",
-                                                textAlign: TextAlign.center,
-                                                style: AppTextStyles.body(
-                                                  12,
-                                                  color: AppColors
-                                                      .onSurfaceVariant
-                                                      .withOpacity(0.7),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 32),
-                                              TextButton.icon(
-                                                onPressed: () => Get.toNamed(
-                                                  AppRoutes.REQUEST_EVENT,
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.add,
-                                                  size: 16,
-                                                ),
-                                                label: Text(
-                                                  "CREATE ANNOUNCEMENT",
-                                                  style: AppTextStyles.label(
-                                                    10,
-                                                    weight: FontWeight.w900,
-                                                    letterSpacing: 1.5,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                                style: TextButton.styleFrom(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 20,
-                                                        vertical: 12,
-                                                      ),
-                                                  backgroundColor: AppColors
-                                                      .primary
-                                                      .withOpacity(0.1),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
+                                      return const _EmptyWireState();
                                     }
                                     return ListView.separated(
                                       itemCount: _controller
@@ -755,6 +667,361 @@ class _InfoBox extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3-D Flip Empty State
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmptyWireState extends StatefulWidget {
+  const _EmptyWireState();
+
+  @override
+  State<_EmptyWireState> createState() => _EmptyWireStateState();
+}
+
+class _EmptyWireStateState extends State<_EmptyWireState>
+    with TickerProviderStateMixin {
+  // ── Controllers ──────────────────────────────────────────────────────────
+  late final AnimationController _flipCtrl;
+  late final AnimationController _floatCtrl;
+  late final AnimationController _glowCtrl;
+
+  // ── Animations ───────────────────────────────────────────────────────────
+  late final Animation<double> _flipAnim;
+  late final Animation<double> _floatAnim;
+  late final Animation<double> _glowAnim;
+
+  int _currentIndex = 0;
+
+  // ── Items: emoji · label · accent colour ─────────────────────────────────
+  static const _items = [
+    (
+      emoji: '🎸',
+      label: 'MUSIC & CULTURE',
+      color: Color(0xFFD394FF),
+    ),
+    (
+      emoji: '🏏',
+      label: 'SPORTS & CLUBS',
+      color: Color(0xFFC3F400),
+    ),
+    (
+      emoji: '⚽',
+      label: 'EVENTS & FESTS',
+      color: Color(0xFF00F4FE),
+    ),
+  ];
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+
+    // Smooth vertical float
+    _floatCtrl = AnimationController(
+      duration: const Duration(milliseconds: 2200),
+      vsync: this,
+    )..repeat(reverse: true);
+    _floatAnim = Tween<double>(begin: -12, end: 12).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
+    );
+
+    // Pulsing glow intensity
+    _glowCtrl = AnimationController(
+      duration: const Duration(milliseconds: 1600),
+      vsync: this,
+    )..repeat(reverse: true);
+    _glowAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut),
+    );
+
+    // Y-axis 3-D flip (0 → 1 maps to 0 → π)
+    _flipCtrl = AnimationController(
+      duration: const Duration(milliseconds: 700),
+      vsync: this,
+    );
+    _flipAnim = CurvedAnimation(
+      parent: _flipCtrl,
+      curve: Curves.easeInOut,
+    );
+
+    _flipCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Advance index at the midpoint (already visible after flip completes)
+        _flipCtrl.reset();
+        if (mounted) {
+          setState(() {
+            _currentIndex = (_currentIndex + 1) % _items.length;
+          });
+        }
+        // Pause 2 s, then flip to next
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) _flipCtrl.forward();
+        });
+      }
+    });
+
+    // Start first flip after 2 s
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _flipCtrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _flipCtrl.dispose();
+    _floatCtrl.dispose();
+    _glowCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ── 3-D Flip Orb ───────────────────────────────────────────────
+            AnimatedBuilder(
+              animation: Listenable.merge([_flipAnim, _floatAnim, _glowAnim]),
+              builder: (context, _) {
+                final flipAngle = _flipAnim.value * pi; // 0 → π
+                final isFirstHalf = flipAngle < pi / 2;
+
+                // During the second half we show the NEXT item's colour/emoji
+                // but at a mirrored angle so it appears to "unwrap" from 90°
+                final nextIndex = (_currentIndex + 1) % _items.length;
+                final visibleItem =
+                    isFirstHalf ? _items[_currentIndex] : _items[nextIndex];
+                // Remap angle so second half runs from π/2 back toward 0
+                final displayAngle = isFirstHalf ? flipAngle : flipAngle - pi;
+
+                final accentColor = visibleItem.color;
+
+                return Transform.translate(
+                  offset: Offset(0, _floatAnim.value),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // ── Ambient glow blob ──────────────────────────────
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentColor
+                                  .withOpacity(_glowAnim.value * 0.35),
+                              blurRadius: 80,
+                              spreadRadius: 30,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // ── Outer orbit ring ───────────────────────────────
+                      Container(
+                        width: 196,
+                        height: 196,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: accentColor.withOpacity(0.18),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+
+                      // ── Middle orbit ring (tilted) ─────────────────────
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.002)
+                          ..rotateX(0.8),
+                        child: Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.25),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ── Inner orbit ring (counter-tilt) ───────────────
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.002)
+                          ..rotateX(-0.5)
+                          ..rotateZ(0.4),
+                        child: Container(
+                          width: 152,
+                          height: 152,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.15),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // ── 3-D flipping card ─────────────────────────────
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.003) // perspective
+                          ..rotateY(displayAngle),
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.surfaceContainerHigh,
+                            border: Border.all(
+                              color: accentColor.withOpacity(0.55),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accentColor.withOpacity(0.25),
+                                blurRadius: 24,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              visibleItem.emoji,
+                              style: const TextStyle(fontSize: 52),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Dot indicators ─────────────────────────────────────────────
+            AnimatedBuilder(
+              animation: _flipAnim,
+              builder: (context, _) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_items.length, (i) {
+                    final active = i == _currentIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOut,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: active ? 28 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? _items[i].color
+                            : AppColors.onSurfaceVariant.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── Animated label ─────────────────────────────────────────────
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.3),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
+              ),
+              child: Text(
+                _items[_currentIndex].label,
+                key: ValueKey(_currentIndex),
+                style: AppTextStyles.label(
+                  11,
+                  color: _items[_currentIndex].color,
+                  letterSpacing: 2.5,
+                  weight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              'THE WIRE IS QUIET',
+              style: AppTextStyles.headline(
+                18,
+                weight: FontWeight.w900,
+                letterSpacing: 2,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              'No live broadcasts at the moment.\nBe the one to break the silence.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(
+                12,
+                color: AppColors.onSurfaceVariant.withOpacity(0.7),
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── CTA button ─────────────────────────────────────────────────
+            TextButton.icon(
+              onPressed: () => Get.toNamed(AppRoutes.REQUEST_EVENT),
+              icon: const Icon(Icons.add, size: 16),
+              label: Text(
+                'CREATE ANNOUNCEMENT',
+                style: AppTextStyles.label(
+                  10,
+                  weight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  color: AppColors.primary,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
